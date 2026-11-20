@@ -24,9 +24,17 @@ Pad: U/D move the paddle, `-` quits.
 `micropython tests/mp_check.py` checks the core under MicroPython.
 
 ## The subset
-Rect; display.set_mode/flip/update; Surface.fill/get_rect; draw.rect/circle/line
-(filled only); event.get (KEYDOWN/KEYUP; pad U D L R A B X Y + - map to
+Rect; display.set_mode/flip/update; Surface.fill/blit/get_rect; draw.rect/circle/line
+(filled only); font.Font(None, size).render (one bitmap font, size sets the
+scale); event.get (KEYDOWN/KEYUP; pad U D L R A B X Y + - map to
 K_UP K_DOWN K_LEFT K_RIGHT K_a K_b K_x K_y K_RETURN K_ESCAPE); key.get_pressed;
-time.Clock.tick, time.get_ticks. No off-screen surfaces, images, fonts or sound yet.
+time.Clock.tick, time.get_ticks; mixer.stop.
+
+Sound: `from tones import tone`, then `tone(frequency, ms).play()`. On the
+Explorer it drives the speaker, one note at a time, ended by `display.flip()`
+(so lengths round to the frame time). On the desktop it plays a generated
+square wave through pygame's mixer.
+
+No off-screen surfaces, images or sound files.
 
 MIT licence.

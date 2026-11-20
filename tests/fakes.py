@@ -35,6 +35,21 @@ class RecordingDisplay(mg.Display):
         self.frames += 1
 
 
+class RecordingSpeaker(mg.Speaker):
+    def __init__(self, timer=None):
+        self.timer = timer
+        self.calls = []
+
+    def _now(self):
+        return self.timer.now_ms() if self.timer else None
+
+    def play(self, frequency):
+        self.calls.append(('play', frequency, self._now()))
+
+    def stop(self):
+        self.calls.append(('stop', self._now()))
+
+
 class ScriptedButtons(mg.Buttons):
     """Returns each set in turn, then the last one forever."""
 
@@ -90,7 +105,8 @@ class FakePad:
         return self.states
 
 
-def fake_pygame(buttons=None, display=None, timer=None):
+def fake_pygame(buttons=None, display=None, timer=None, speaker=None):
     return mg.Pygame(display or RecordingDisplay(),
                      buttons or ScriptedButtons(),
-                     timer or FakeTimer())
+                     timer or FakeTimer(),
+                     speaker)

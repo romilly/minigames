@@ -6,8 +6,12 @@ Explorer with the minigame shim (pad U/D, '-' to quit).
 Speeds are in pixels per second; each update moves things by speed times
 the time since the last frame, so the game runs at the same speed whatever
 the frame rate.
+
+update() returns what happened ('paddle', 'wall', 'miss'), and main()
+plays a sound for each.
 """
 import pygame
+from tones import tone
 
 WIDTH, HEIGHT = 320, 240
 BLACK = (0, 0, 0)
@@ -34,6 +38,7 @@ class Pong:
         self.vx, self.vy = -BALL_SPEED_X, BALL_SPEED_Y
 
     def update(self, up, down, dt_ms):
+        happened = []
         dt = min(dt_ms, MAX_DT_MS) / 1000
         if up:
             self.paddle_y -= PADDLE_SPEED * dt
@@ -47,18 +52,24 @@ class Pong:
         self.ball_x += self.vx * dt
         self.ball_y += self.vy * dt
         self.ball.x, self.ball.y = int(self.ball_x), int(self.ball_y)
-        if self.ball.top <= 0:
-            self.vy = abs(self.vy)
-        if self.ball.bottom >= self.bounds.bottom:
-            self.vy = -abs(self.vy)
-        if self.ball.right >= self.bounds.right:
-            self.vx = -abs(self.vx)
+        if self.ball.top <= 0 and self.vy < 0:
+            self.vy = -self.vy
+            happened.append('wall')
+        if self.ball.bottom >= self.bounds.bottom and self.vy > 0:
+            self.vy = -self.vy
+            happened.append('wall')
+        if self.ball.right >= self.bounds.right and self.vx > 0:
+            self.vx = -self.vx
+            happened.append('wall')
         if self.vx < 0 and self.ball.colliderect(self.paddle):
-            self.vx = abs(self.vx)
+            self.vx = -self.vx
             self.score += 1
+            happened.append('paddle')
         if self.ball.right < 0:
             self.misses += 1
             self.serve()
+            happened.append('miss')
+        return happened
 
     def status(self):
         return 'Score %d   Missed %d' % (self.score, self.misses)
@@ -76,6 +87,7 @@ def main(fps=30):
     screen = pygame.display.set_mode((WIDTH, HEIGHT))
     clock = pygame.time.Clock()
     font = pygame.font.Font(None, 24)
+    sounds = {'paddle': tone(880, 40), 'wall': tone(440, 40), 'miss': tone(110, 300)}
     game = Pong()
     running = True
     dt = 0
@@ -86,7 +98,8 @@ def main(fps=30):
             elif event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
                 running = False
         keys = pygame.key.get_pressed()
-        game.update(keys[pygame.K_UP], keys[pygame.K_DOWN], dt)
+        for what in game.update(keys[pygame.K_UP], keys[pygame.K_DOWN], dt):
+            sounds[what].play()
         game.draw(screen, font)
         pygame.display.flip()
         dt = clock.tick(fps)

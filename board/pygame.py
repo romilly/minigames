@@ -1,12 +1,13 @@
 # Copy to the Explorer as pygame.py, alongside minigame.py and qwstpad.py.
 # Wires minigame's ports to the Explorer's display and a Qw/ST Pad.
-from explorer import display as _lcd, i2c as _i2c
+from explorer import display as _lcd, i2c as _i2c, play_tone, stop_playing
 from qwstpad import QwSTPad, DEFAULT_ADDRESS
 import minigame as _mg
 
 _pg = _mg.Pygame(_mg.PicoGraphicsDisplay(_lcd),
                  _mg.QwstPadButtons(QwSTPad(_i2c, DEFAULT_ADDRESS)),
-                 _mg.TicksTimer())
+                 _mg.TicksTimer(),
+                 _mg.ExplorerSpeaker(play_tone, stop_playing))
 
 Rect = _mg.Rect
 Surface = _mg.Surface
@@ -20,6 +21,8 @@ quit = _pg.quit
 display = _pg.display
 draw = _pg.draw
 font = _pg.font
+mixer = _pg.mixer
+tone = _pg.tone
 event = _pg.event
 key = _pg.key
 time = _pg.time

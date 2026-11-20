@@ -7,7 +7,8 @@ hardware objects as arguments, so everything here can be tested on CPython.
 Supported: Rect, display.set_mode/flip, Surface.fill/blit, draw.rect/circle/line
 (filled shapes only), font.Font(None, size).render (one bitmap font; size sets
 the scale), event.get (KEYDOWN/KEYUP), key.get_pressed, time.Clock.tick,
-init/quit.
+init/quit, and tone(frequency, ms).play(): not pygame, but tones.py gives games
+the same call on the desktop. One note at a time; display.flip() ends notes.
 """
 
 import time
@@ -212,6 +213,24 @@ class Buttons:
         raise NotImplementedError
 
 
+class Speaker:
+    """Plays one note at a time."""
+
+    def play(self, frequency):
+        raise NotImplementedError
+
+    def stop(self):
+        raise NotImplementedError
+
+
+class SilentSpeaker(Speaker):
+    def play(self, frequency):
+        pass
+
+    def stop(self):
+        pass
+
+
 class Timer:
     def now_ms(self):
         raise NotImplementedError
@@ -284,6 +303,20 @@ class QwstPadButtons(Buttons):
     def pressed(self):
         states = self._pad.read_buttons()
         return set(PAD_KEYS[name] for name in PAD_KEYS if states.get(name))
+
+
+class ExplorerSpeaker(Speaker):
+    """Adapts the explorer module's play_tone and stop_playing functions."""
+
+    def __init__(self, play_tone, stop_playing):
+        self._play_tone = play_tone
+        self._stop_playing = stop_playing
+
+    def play(self, frequency):
+        self._play_tone(int(frequency))
+
+    def stop(self):
+        self._stop_playing()
 
 
 class TicksTimer(Timer):
@@ -409,18 +442,66 @@ class Clock:
         return elapsed
 
 
+class Sounds:
+    """Starts notes and ends them when their time is up."""
+
+    def __init__(self, speaker, timer):
+        self._speaker = speaker
+        self._timer = timer
+        self._ends_at = None
+
+    def play(self, frequency, ms):
+        self._speaker.play(frequency)
+        self._ends_at = self._timer.now_ms() + ms
+
+    def stop(self):
+        self._speaker.stop()
+        self._ends_at = None
+
+    def update(self):
+        if self._ends_at is not None and \
+                self._timer.diff_ms(self._timer.now_ms(), self._ends_at) >= 0:
+            self.stop()
+
+
+class Tone:
+    def __init__(self, sounds, frequency, ms):
+        self._sounds = sounds
+        self.frequency = frequency
+        self.ms = ms
+
+    def play(self):
+        self._sounds.play(self.frequency, self.ms)
+
+    def stop(self):
+        self._sounds.stop()
+
+
+class _MixerModule:
+    def __init__(self, sounds):
+        self._sounds = sounds
+
+    def init(self, *args, **kwargs):
+        pass
+
+    def stop(self):
+        self._sounds.stop()
+
+
 class _DisplayModule:
-    def __init__(self, display):
+    def __init__(self, display, sounds):
         self._display = display
+        self._sounds = sounds
 
     def set_mode(self, size=None, flags=0):
         return Surface(self._display)
 
     def flip(self):
         self._display.update()
+        self._sounds.update()
 
     def update(self, *rects):
-        self._display.update()
+        self.flip()
 
     def set_caption(self, title):
         pass
@@ -497,14 +578,16 @@ class _TimeModule:
 class Pygame:
     """Everything a game reaches through `pygame.`, wired to three ports."""
 
-    def __init__(self, display, buttons, timer):
+    def __init__(self, display, buttons, timer, speaker=None):
         self.Rect = Rect
         self.Surface = Surface
         for name in ('QUIT', 'KEYDOWN', 'KEYUP', 'K_UP', 'K_DOWN', 'K_LEFT',
                      'K_RIGHT', 'K_a', 'K_b', 'K_x', 'K_y', 'K_RETURN',
                      'K_ESCAPE', 'K_SPACE'):
             setattr(self, name, globals()[name])
-        self.display = _DisplayModule(display)
+        self._sounds = Sounds(speaker or SilentSpeaker(), timer)
+        self.display = _DisplayModule(display, self._sounds)
+        self.mixer = _MixerModule(self._sounds)
         self.draw = _DrawModule()
         self.font = _FontModule(display)
         self.event = _EventModule(buttons)
@@ -515,4 +598,7 @@ class Pygame:
         return (0, 0)
 
     def quit(self):
-        pass
+        self._sounds.stop()
+
+    def tone(self, frequency, ms):
+        return Tone(self._sounds, frequency, ms)

@@ -6,7 +6,7 @@ sys.path.insert(0, '.')
 sys.path.insert(0, 'tests')
 
 import minigame as mg
-from fakes import RecordingDisplay, ScriptedButtons, FakeTimer, FakeGraphics, FakePad, fake_pygame
+from fakes import RecordingDisplay, ScriptedButtons, FakeTimer, FakeGraphics, FakePad, RecordingSpeaker, fake_pygame
 
 r = mg.Rect(0, 0, 10, 20)
 r.right = 100
@@ -25,6 +25,17 @@ t = mg.TicksTimer()
 clock = mg.Clock(t)
 clock.tick(50)
 assert 15 <= clock.tick(50) <= 40
+
+timer = FakeTimer()
+speaker = RecordingSpeaker(timer)
+spg = fake_pygame(timer=timer, speaker=speaker)
+spg.tone(880, 40).play()
+timer.t = 40
+spg.display.flip()
+assert speaker.calls == [('play', 880, 0), ('stop', 40)], speaker.calls
+calls = []
+mg.ExplorerSpeaker(lambda f: calls.append(f), lambda: calls.append('stop')).play(440.5)
+assert calls == [440]
 
 display = RecordingDisplay()
 pg = fake_pygame(display=display,

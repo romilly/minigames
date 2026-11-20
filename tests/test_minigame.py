@@ -3,7 +3,7 @@ import pytest
 
 import minigame as mg
 from fakes import (RecordingDisplay, ScriptedButtons, FakeTimer, FakeGraphics,
-                   FakePad, fake_pygame)
+                   FakePad, RecordingSpeaker, fake_pygame)
 
 # ---- Rect: the same tests run against real pygame.Rect, as a contract ----
 
@@ -205,3 +205,52 @@ def test_text_can_be_centred_with_get_rect():
 def test_font_size_sets_the_scale():
     pg = fake_pygame()
     assert [pg.font.Font(None, n).scale for n in (8, 12, 24, 36, 48)] == [1, 1, 2, 3, 4]
+
+
+# ---- Sound ----
+
+def test_a_tone_plays_until_its_time_is_up_then_flip_stops_it():
+    timer = FakeTimer()
+    speaker = RecordingSpeaker(timer)
+    pg = fake_pygame(timer=timer, speaker=speaker)
+    pg.tone(880, 40).play()
+    timer.t = 33
+    pg.display.flip()
+    assert speaker.calls == [('play', 880, 0)]
+    timer.t = 40
+    pg.display.flip()
+    assert speaker.calls == [('play', 880, 0), ('stop', 40)]
+    timer.t = 80
+    pg.display.flip()
+    assert len(speaker.calls) == 2          # stops only once
+
+
+def test_a_new_tone_cuts_off_the_old_one():
+    timer = FakeTimer()
+    speaker = RecordingSpeaker(timer)
+    pg = fake_pygame(timer=timer, speaker=speaker)
+    pg.tone(110, 300).play()
+    timer.t = 20
+    pg.tone(880, 40).play()
+    timer.t = 60
+    pg.display.flip()
+    assert speaker.calls == [('play', 110, 0), ('play', 880, 20), ('stop', 60)]
+
+
+def test_quit_and_mixer_stop_silence_the_speaker():
+    speaker = RecordingSpeaker()
+    pg = fake_pygame(speaker=speaker)
+    pg.tone(440, 1000).play()
+    pg.mixer.stop()
+    pg.tone(440, 1000).play()
+    pg.quit()
+    assert [c[0] for c in speaker.calls] == ['play', 'stop', 'play', 'stop']
+
+
+def test_explorer_speaker_adapter():
+    calls = []
+    speaker = mg.ExplorerSpeaker(lambda f: calls.append(('tone', f)),
+                                 lambda: calls.append(('stop',)))
+    speaker.play(440.7)
+    speaker.stop()
+    assert calls == [('tone', 440), ('stop',)]
