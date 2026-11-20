@@ -1,7 +1,7 @@
 # minigames
 
-Games for the Pimoroni Explorer, written against a small subset of pygame for MicroPython on the Pimoroni Explorer (RP2350),
-with a Qw/ST Pad as the controller. A game written against the subset runs
+Games for the Pimoroni Explorer (RP2350), written against a small subset of
+pygame (`minigame.py`) for MicroPython, with a Qw/ST Pad as the controller. A game written against the subset runs
 unchanged on a desktop under real pygame.
 
 ## On the Explorer
