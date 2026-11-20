@@ -5,8 +5,15 @@ pygame (`minigame.py`) for MicroPython, with a Qw/ST Pad as the controller. A ga
 unchanged on a desktop under real pygame.
 
 ## On the Explorer
-Copy these to the board: `minigame.py`, `board/pygame.py` (as `pygame.py`),
-`qwstpad.py` (from pimoroni/qwstpad-micropython) and `pong.py`. Run `pong.py`.
+With the board plugged in by USB and [mpr](https://github.com/bulletmark/mpr)
+and mpremote installed:
+
+    scripts/deploy.sh          # copy everything to the board
+    scripts/deploy.sh pong     # copy everything, then run pong.py
+
+The script copies `minigame.py` and the games to `/`, `board/pygame.py` to
+`/pygame.py`, and installs Pimoroni's `qwstpad` into `/lib` if it isn't there.
+Set `MPR_DEVICE` (e.g. `/dev/ttyACM0`) if more than one board is plugged in.
 Pad: U/D move the paddle, `-` quits.
 
 ## On the desktop
