@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Deploy minigames to an Explorer over USB with mpr (pip/pipx/uv install mpr mpremote).
+# Deploy minigames to an Explorer over USB with mpremote (pip/pipx/uv install mpremote).
 #
 #   scripts/deploy.sh          copy everything to the board
 #   scripts/deploy.sh pong     copy everything, then run pong.py
@@ -11,16 +11,15 @@
 set -euo pipefail
 
 cd "$(dirname "$0")/.."
-mpr=(mpr ${MPR_DEVICE:+-d "$MPR_DEVICE"})
+mpremote=(mpremote ${MPR_DEVICE:+connect "$MPR_DEVICE"})
 
-if ! "${mpr[@]}" ls /lib 2>/dev/null | grep -q qwstpad; then
+if ! "${mpremote[@]}" ls :/lib 2>/dev/null | grep -q qwstpad; then
     echo "Installing qwstpad into /lib"
-    "${mpr[@]}" mip install github:pimoroni/qwstpad-micropython
+    "${mpremote[@]}" mip install github:pimoroni/qwstpad-micropython
 fi
 
-"${mpr[@]}" put *.py /
-"${mpr[@]}" put -f board/pygame.py /pygame.py
+"${mpremote[@]}" cp *.py : + cp board/pygame.py :pygame.py
 
 if [[ $# -gt 0 ]]; then
-    "${mpr[@]}" run "$1.py"
+    "${mpremote[@]}" run "$1.py"
 fi

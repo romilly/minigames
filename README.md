@@ -5,8 +5,8 @@ pygame (`minigame.py`) for MicroPython, with a Qw/ST Pad as the controller. A ga
 unchanged on a desktop under real pygame.
 
 ## On the Explorer
-With the board plugged in by USB and [mpr](https://github.com/bulletmark/mpr)
-and mpremote installed:
+With the board plugged in by USB and
+[mpremote](https://docs.micropython.org/en/latest/reference/mpremote.html) installed:
 
     scripts/deploy.sh          # copy everything to the board
     scripts/deploy.sh pong     # copy everything, then run pong.py
