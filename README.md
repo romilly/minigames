@@ -4,6 +4,14 @@ Games for the Pimoroni Explorer (RP2350), written against a small subset of
 pygame (`minigame.py`) for MicroPython, with a Qw/ST Pad as the controller. A game written against the subset runs
 unchanged on a desktop under real pygame.
 
+## Games
+- `pong.py`: one paddle against three walls. U/D move; a point per return.
+- `noughts.py`: noughts and crosses against the computer (minimax with
+  alpha-beta pruning, with an occasional deliberate mistake so it can be
+  beaten). D-pad moves, A places; A again for a new game.
+
+`-` on the pad (Esc on the desktop) quits.
+
 ## On the Explorer
 With the board plugged in by USB and
 [mpremote](https://docs.micropython.org/en/latest/reference/mpremote.html) installed:
@@ -14,7 +22,6 @@ With the board plugged in by USB and
 The script copies `minigame.py` and the games to `/`, `board/pygame.py` to
 `/pygame.py`, and installs Pimoroni's `qwstpad` into `/lib` if it isn't there.
 Set `MPR_DEVICE` (e.g. `/dev/ttyACM0`) if more than one board is plugged in.
-Pad: U/D move the paddle, `-` quits.
 
 ## On the desktop
 `python pong.py` with pygame installed. Arrow keys, Esc to quit.

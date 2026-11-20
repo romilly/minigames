@@ -46,3 +46,23 @@ game = pong.main()
 assert display.frames == 4, display.frames
 assert game.paddle.y < 100, game.paddle.y
 print('MicroPython check passed')
+
+
+class FirstChoice:
+    def random(self):
+        return 0.99
+
+    def choice(self, options):
+        return options[0]
+
+
+display = RecordingDisplay()
+frames = [set(), {mg.K_a}] + [set()] * 20 + [{mg.K_ESCAPE}]
+sys.modules['pygame'] = fake_pygame(display=display, buttons=ScriptedButtons(*frames))
+for name in ('noughts', 'tones'):
+    sys.modules.pop(name, None)
+import noughts
+assert noughts.best_moves(list('XX  O    '), 'O') == [2]
+game = noughts.main(game=noughts.Noughts(FirstChoice()))
+assert game.board.count('X') == 1 and game.board.count('O') == 1, game.board
+print('MicroPython noughts check passed')
