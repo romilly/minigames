@@ -28,10 +28,10 @@ assert 15 <= clock.tick(50) <= 40
 
 display = RecordingDisplay()
 pg = fake_pygame(display=display,
-                 buttons=ScriptedButtons({mg.K_UP}, {mg.K_UP}, {mg.K_ESCAPE}))
+                 buttons=ScriptedButtons({mg.K_UP}, {mg.K_UP}, {mg.K_UP}, {mg.K_ESCAPE}))
 sys.modules['pygame'] = pg
 import pong
 game = pong.main()
-assert display.frames == 3, display.frames
-assert game.paddle.y == 100 - 2 * pong.PADDLE_SPEED
+assert display.frames == 4, display.frames
+assert game.paddle.y < 100, game.paddle.y
 print('MicroPython check passed')

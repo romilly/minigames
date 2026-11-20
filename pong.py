@@ -2,35 +2,50 @@
 
 Runs unchanged under desktop pygame (arrow keys, Esc to quit) and on the
 Explorer with the minigame shim (pad U/D, '-' to quit).
+
+Speeds are in pixels per second; each update moves things by speed times
+the time since the last frame, so the game runs at the same speed whatever
+the frame rate.
 """
 import pygame
 
 WIDTH, HEIGHT = 320, 240
 BLACK = (0, 0, 0)
 WHITE = (255, 255, 255)
-PADDLE_SPEED = 4
+PADDLE_SPEED = 240
+BALL_SPEED_X = 180
+BALL_SPEED_Y = 120
+MAX_DT_MS = 50      # after a stall, don't let the ball jump through the paddle
 
 
 class Pong:
     def __init__(self, width=WIDTH, height=HEIGHT):
         self.bounds = pygame.Rect(0, 0, width, height)
         self.paddle = pygame.Rect(8, height // 2 - 20, 6, 40)
+        self.paddle_y = float(self.paddle.y)
         self.misses = 0
         self.serve()
 
     def serve(self):
         self.ball = pygame.Rect(0, 0, 6, 6)
         self.ball.center = self.bounds.center
-        self.vx, self.vy = -3, 2
+        self.ball_x, self.ball_y = float(self.ball.x), float(self.ball.y)
+        self.vx, self.vy = -BALL_SPEED_X, BALL_SPEED_Y
 
-    def update(self, up, down):
+    def update(self, up, down, dt_ms):
+        dt = min(dt_ms, MAX_DT_MS) / 1000
         if up:
-            self.paddle.move_ip(0, -PADDLE_SPEED)
+            self.paddle_y -= PADDLE_SPEED * dt
         if down:
-            self.paddle.move_ip(0, PADDLE_SPEED)
+            self.paddle_y += PADDLE_SPEED * dt
+        self.paddle.y = int(self.paddle_y)
         self.paddle.clamp_ip(self.bounds)
+        if self.paddle.y != int(self.paddle_y):
+            self.paddle_y = float(self.paddle.y)
 
-        self.ball.move_ip(self.vx, self.vy)
+        self.ball_x += self.vx * dt
+        self.ball_y += self.vy * dt
+        self.ball.x, self.ball.y = int(self.ball_x), int(self.ball_y)
         if self.ball.top <= 0:
             self.vy = abs(self.vy)
         if self.ball.bottom >= self.bounds.bottom:
@@ -55,6 +70,7 @@ def main(fps=30):
     clock = pygame.time.Clock()
     game = Pong()
     running = True
+    dt = 0
     while running:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
@@ -62,10 +78,10 @@ def main(fps=30):
             elif event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
                 running = False
         keys = pygame.key.get_pressed()
-        game.update(keys[pygame.K_UP], keys[pygame.K_DOWN])
+        game.update(keys[pygame.K_UP], keys[pygame.K_DOWN], dt)
         game.draw(screen)
         pygame.display.flip()
-        clock.tick(fps)
+        dt = clock.tick(fps)
     pygame.quit()
     return game
 
