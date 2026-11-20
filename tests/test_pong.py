@@ -55,6 +55,13 @@ def test_ball_bounces_off_paddle():
     game.ball_y = game.paddle.centery
     game.update(False, False, 33)
     assert game.vx > 0
+    assert game.score == 1
+
+
+def test_status_shows_score_and_misses():
+    game = pong.Pong()
+    game.score, game.misses = 7, 2
+    assert game.status() == 'Score 7   Missed 2'
 
 
 def test_missed_ball_is_counted_and_served_again():
@@ -88,3 +95,4 @@ def test_main_runs_on_the_shim_until_minus_is_pressed(monkeypatch):
     # frames 3-5 hold UP for 40 ms each at 240 px/s: 3 * 9.6 px
     assert game.paddle.y == int(100 - 3 * 9.6)
     assert display.calls[0] == ('fill', (0, 0, 0))
+    assert display.calls[1][:3] == ('text', (255, 255, 255), 'Score 0   Missed 0')

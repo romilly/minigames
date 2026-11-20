@@ -4,9 +4,10 @@ Ports (Display, Buttons, Timer) are plain base classes because MicroPython
 has no abc module. Adapters for PicoGraphics and the Qw/ST Pad take the
 hardware objects as arguments, so everything here can be tested on CPython.
 
-Supported: Rect, display.set_mode/flip, Surface.fill, draw.rect/circle/line
-(filled shapes only), event.get (KEYDOWN/KEYUP), key.get_pressed,
-time.Clock.tick, init/quit.
+Supported: Rect, display.set_mode/flip, Surface.fill/blit, draw.rect/circle/line
+(filled shapes only), font.Font(None, size).render (one bitmap font; size sets
+the scale), event.get (KEYDOWN/KEYUP), key.get_pressed, time.Clock.tick,
+init/quit.
 """
 
 import time
@@ -48,6 +49,12 @@ class Rect:
 
     def __iter__(self):
         return iter((self.x, self.y, self.w, self.h))
+
+    def __len__(self):
+        return 4
+
+    def __getitem__(self, i):
+        return (self.x, self.y, self.w, self.h)[i]
 
     def __eq__(self, other):
         return tuple(self) == tuple(other)
@@ -185,6 +192,15 @@ class Display:
     def line(self, color, x1, y1, x2, y2):
         raise NotImplementedError
 
+    def text(self, color, text, x, y, scale):
+        raise NotImplementedError
+
+    def text_width(self, text, scale):
+        raise NotImplementedError
+
+    def text_height(self, scale):
+        raise NotImplementedError
+
     def update(self):
         raise NotImplementedError
 
@@ -210,9 +226,13 @@ class Timer:
 # ---- Adapters ----
 
 class PicoGraphicsDisplay(Display):
+    FONT = 'bitmap8'
+    FONT_HEIGHT = 8
+
     def __init__(self, graphics):
         self._g = graphics
         self._pens = {}
+        self._g.set_font(self.FONT)
 
     def _use(self, color):
         color = tuple(color[:3])
@@ -240,6 +260,16 @@ class PicoGraphicsDisplay(Display):
     def line(self, color, x1, y1, x2, y2):
         self._use(color)
         self._g.line(x1, y1, x2, y2)
+
+    def text(self, color, text, x, y, scale):
+        self._use(color)
+        self._g.text(text, x, y, -1, scale)
+
+    def text_width(self, text, scale):
+        return self._g.measure_text(text, scale)
+
+    def text_height(self, scale):
+        return self.FONT_HEIGHT * scale
 
     def update(self):
         self._g.update()
@@ -302,6 +332,54 @@ class Surface:
     def fill(self, color):
         self._display.fill(color)
 
+    def blit(self, source, dest):
+        x, y = dest[0], dest[1]
+        source._draw_on(self._display, int(x), int(y))
+        return Rect(int(x), int(y), source.get_width(), source.get_height())
+
+
+class TextSurface:
+    """What Font.render returns. It can only be blitted to the screen."""
+
+    def __init__(self, display, text, color, scale):
+        self._display = display
+        self._text = text
+        self._color = color
+        self._scale = scale
+
+    def _draw_on(self, display, x, y):
+        display.text(self._color, self._text, x, y, self._scale)
+
+    def get_width(self):
+        return self._display.text_width(self._text, self._scale)
+
+    def get_height(self):
+        return self._display.text_height(self._scale)
+
+    def get_size(self):
+        return (self.get_width(), self.get_height())
+
+    def get_rect(self, **kwargs):
+        r = Rect(0, 0, self.get_width(), self.get_height())
+        for name in kwargs:
+            setattr(r, name, kwargs[name])
+        return r
+
+
+class Font:
+    """pygame.font.Font(None, size). size 24 (pygame's usual) gives scale 2."""
+
+    def __init__(self, display, name=None, size=24):
+        self._display = display
+        self.scale = max(1, int(size) // 12)
+
+    def render(self, text, antialias=False, color=(255, 255, 255), background=None):
+        return TextSurface(self._display, str(text), color, self.scale)
+
+    def size(self, text):
+        return (self._display.text_width(str(text), self.scale),
+                self._display.text_height(self.scale))
+
 
 class KeyState:
     def __init__(self, pressed):
@@ -363,6 +441,20 @@ class _DrawModule:
                               int(end[0]), int(end[1]))
 
 
+class _FontModule:
+    def __init__(self, display):
+        self._display = display
+
+    def init(self):
+        pass
+
+    def Font(self, name=None, size=24):
+        return Font(self._display, name, size)
+
+    def SysFont(self, name=None, size=24, bold=False, italic=False):
+        return Font(self._display, name, size)
+
+
 class _EventModule:
     def __init__(self, buttons):
         self._buttons = buttons
@@ -414,6 +506,7 @@ class Pygame:
             setattr(self, name, globals()[name])
         self.display = _DisplayModule(display)
         self.draw = _DrawModule()
+        self.font = _FontModule(display)
         self.event = _EventModule(buttons)
         self.key = _KeyModule(self.event)
         self.time = _TimeModule(timer)

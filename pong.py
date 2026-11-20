@@ -1,4 +1,4 @@
-"""Pong walking skeleton: one paddle, one ball, three walls.
+"""Pong: one paddle, one ball, three walls. A point for each return.
 
 Runs unchanged under desktop pygame (arrow keys, Esc to quit) and on the
 Explorer with the minigame shim (pad U/D, '-' to quit).
@@ -23,6 +23,7 @@ class Pong:
         self.bounds = pygame.Rect(0, 0, width, height)
         self.paddle = pygame.Rect(8, height // 2 - 20, 6, 40)
         self.paddle_y = float(self.paddle.y)
+        self.score = 0
         self.misses = 0
         self.serve()
 
@@ -54,12 +55,18 @@ class Pong:
             self.vx = -abs(self.vx)
         if self.vx < 0 and self.ball.colliderect(self.paddle):
             self.vx = abs(self.vx)
+            self.score += 1
         if self.ball.right < 0:
             self.misses += 1
             self.serve()
 
-    def draw(self, screen):
+    def status(self):
+        return 'Score %d   Missed %d' % (self.score, self.misses)
+
+    def draw(self, screen, font):
         screen.fill(BLACK)
+        text = font.render(self.status(), False, WHITE)
+        screen.blit(text, text.get_rect(centerx=self.bounds.centerx, top=4))
         pygame.draw.rect(screen, WHITE, self.paddle)
         pygame.draw.rect(screen, WHITE, self.ball)
 
@@ -68,6 +75,7 @@ def main(fps=30):
     pygame.init()
     screen = pygame.display.set_mode((WIDTH, HEIGHT))
     clock = pygame.time.Clock()
+    font = pygame.font.Font(None, 24)
     game = Pong()
     running = True
     dt = 0
@@ -79,7 +87,7 @@ def main(fps=30):
                 running = False
         keys = pygame.key.get_pressed()
         game.update(keys[pygame.K_UP], keys[pygame.K_DOWN], dt)
-        game.draw(screen)
+        game.draw(screen, font)
         pygame.display.flip()
         dt = clock.tick(fps)
     pygame.quit()

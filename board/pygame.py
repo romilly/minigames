@@ -19,6 +19,7 @@ init = _pg.init
 quit = _pg.quit
 display = _pg.display
 draw = _pg.draw
+font = _pg.font
 event = _pg.event
 key = _pg.key
 time = _pg.time

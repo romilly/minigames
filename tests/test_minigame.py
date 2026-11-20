@@ -51,6 +51,12 @@ def test_colliderect_edges_touching_do_not_collide(Rect):
     assert not a.colliderect(Rect(0, 10, 5, 5))
 
 
+def test_rect_indexing(Rect):
+    r = Rect(1, 2, 3, 4)
+    assert (r[0], r[1], r[2], r[3]) == (1, 2, 3, 4)
+    assert len(r) == 4
+
+
 def test_collidepoint(Rect):
     r = Rect(0, 0, 10, 10)
     assert r.collidepoint(0, 0)
@@ -146,6 +152,7 @@ def test_picographics_adapter_caches_pens():
     d.rect((255, 255, 255), 5, 6, 7, 8)
     d.update()
     assert g.calls == [
+        ('set_font', 'bitmap8'),
         ('create_pen', 0, 0, 0), ('set_pen', (0, 0, 0)), ('clear',),
         ('create_pen', 255, 255, 255), ('set_pen', (255, 255, 255)),
         ('rectangle', 1, 2, 3, 4),
@@ -162,3 +169,39 @@ def test_qwstpad_adapter_maps_letters_to_keys():
     pad.states['U'] = False          # the real pad reuses its dict
     assert first == {mg.K_UP, mg.K_ESCAPE}
     assert buttons.pressed() == {mg.K_ESCAPE}
+
+
+def test_picographics_adapter_text():
+    g = FakeGraphics()
+    d = mg.PicoGraphicsDisplay(g)
+    d.text((255, 255, 255), 'Hi', 10, 20, 2)
+    assert g.calls[-1] == ('text', 'Hi', 10, 20, -1, 2)
+    assert d.text_width('Hi', 2) == 24
+    assert d.text_height(2) == 16
+
+
+# ---- Fonts ----
+
+def test_rendered_text_is_drawn_where_it_is_blitted():
+    display = RecordingDisplay()
+    pg = fake_pygame(display=display)
+    screen = pg.display.set_mode((320, 240))
+    font = pg.font.Font(None, 24)
+    text = font.render('Score 3', False, (255, 255, 0))
+    where = screen.blit(text, (10, 4))
+    assert display.calls == [('text', (255, 255, 0), 'Score 3', 10, 4, 2)]
+    assert where == pg.Rect(10, 4, 84, 16)
+
+
+def test_text_can_be_centred_with_get_rect():
+    display = RecordingDisplay()
+    pg = fake_pygame(display=display)
+    screen = pg.display.set_mode((320, 240))
+    text = pg.font.Font(None, 24).render('abcd', False, (1, 1, 1))
+    screen.blit(text, text.get_rect(centerx=160, top=4))
+    assert display.calls == [('text', (1, 1, 1), 'abcd', 136, 4, 2)]
+
+
+def test_font_size_sets_the_scale():
+    pg = fake_pygame()
+    assert [pg.font.Font(None, n).scale for n in (8, 12, 24, 36, 48)] == [1, 1, 2, 3, 4]

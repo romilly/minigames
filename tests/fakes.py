@@ -22,6 +22,15 @@ class RecordingDisplay(mg.Display):
     def line(self, color, x1, y1, x2, y2):
         self.calls.append(('line', color, x1, y1, x2, y2))
 
+    def text(self, color, text, x, y, scale):
+        self.calls.append(('text', color, text, x, y, scale))
+
+    def text_width(self, text, scale):
+        return len(text) * 6 * scale
+
+    def text_height(self, scale):
+        return 8 * scale
+
     def update(self):
         self.frames += 1
 
@@ -63,6 +72,9 @@ class FakeGraphics:
 
     def set_pen(self, pen):
         self.calls.append(('set_pen', pen))
+
+    def measure_text(self, text, scale):
+        return len(text) * 6 * scale
 
     def __getattr__(self, name):
         return lambda *args: self.calls.append((name,) + args)
