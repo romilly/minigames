@@ -5,7 +5,7 @@
 #   scripts/deploy.sh pong     copy everything, then run pong.py
 #
 # Copies every top-level .py file (minigame.py and the games) to /, and
-# board/pygame.py to /pygame.py. Installs Pimoroni's qwstpad into /lib
+# board/pygame.py to /pygame.py, and the fonts in fonts/ to /. Installs Pimoroni's qwstpad into /lib
 # the first time. Set MPR_DEVICE (e.g. /dev/ttyACM0) if you have more
 # than one board plugged in.
 set -euo pipefail
@@ -18,7 +18,7 @@ if ! "${mpremote[@]}" ls :/lib 2>/dev/null | grep -q qwstpad; then
     "${mpremote[@]}" mip install github:pimoroni/qwstpad-micropython
 fi
 
-"${mpremote[@]}" cp *.py : + cp board/pygame.py :pygame.py
+"${mpremote[@]}" cp *.py fonts/*.af : + cp board/pygame.py :pygame.py
 
 if [[ $# -gt 0 ]]; then
     "${mpremote[@]}" run "$1.py"

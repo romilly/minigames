@@ -309,3 +309,40 @@ def test_pad_or_falls_back_and_says_so_when_the_pad_is_missing():
     fallback = mg.NoButtons()
     assert mg.pad_or(missing_pad, fallback, said.append) is fallback
     assert 'No Qw/ST Pad' in said[0]
+
+
+# ---- Vector text ----
+
+class FakeVector:
+    """Like PicoVector: text sits on its baseline, so its box starts above y."""
+
+    def __init__(self):
+        self.size = None
+        self.drawn = []
+
+    def set_font_size(self, size):
+        self.size = size
+
+    def measure_text(self, text, x=0, y=0, angle=None):
+        # box: 1 px right of x, top at 80% of the size above the baseline
+        return (x + 1, y - 0.8 * self.size, len(text) * 0.5 * self.size, self.size)
+
+    def text(self, text, x, y, angle=None):
+        self.drawn.append((text, x, y, self.size))
+
+
+def test_vector_text_puts_the_top_left_where_asked():
+    vector = FakeVector()
+    d = mg.PicoGraphicsDisplay(FakeGraphics(), vector_text=mg.VectorText(vector))
+    d.text((255, 255, 255), 'Hi', 10, 20, 2)
+    # size 18; box starts 1 px right and 14.4 px up, so draw at (9, 34)
+    assert vector.drawn == [('Hi', 9, 34, 18)]
+    assert d.text_width('Hi', 2) == 18
+    assert d.text_height(2) == 18
+
+
+def test_vector_text_size_follows_the_scale():
+    vector = FakeVector()
+    d = mg.PicoGraphicsDisplay(FakeGraphics(), vector_text=mg.VectorText(vector))
+    d.text((1, 1, 1), 'X', 0, 0, 6)
+    assert vector.drawn[-1][3] == 54

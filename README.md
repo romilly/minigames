@@ -6,6 +6,7 @@ unchanged on a desktop under real pygame.
 
 ## Games
 - `pong.py`: one paddle against three walls. U/D move; a point per return.
+  The ball waits a second before each serve.
 - `noughts.py`: noughts and crosses against the computer (minimax with
   alpha-beta pruning, with an occasional deliberate mistake so it can be
   beaten). D-pad moves, A places; A again for a new game.
@@ -28,6 +29,11 @@ Set `MPR_DEVICE` (e.g. `/dev/ttyACM0`) if more than one board is plugged in.
 `screen.get_size()`. If the pad doesn't answer, it says so and the Explorer's
 own buttons stand in: A up, C down, X left, Z right, B select (like the pad's
 A), Y Enter. The Presto has no spare buttons, so it needs the pad.
+
+On the Presto, text is drawn smoothly with PicoVector in Roboto Medium
+(`fonts/`, copied to the board by the deploy script). Without the font it uses
+the bitmap font. To try smooth text on the Explorer too, set
+`VECTOR_TEXT['explorer'] = True` in `board/pygame.py`; it costs time each frame.
 
 ## On the desktop
 `python pong.py` with pygame installed. Arrow keys, Esc to quit. Set `SIZE = (240, 240)` at the top of a game to see the Presto's shape.

@@ -9,7 +9,7 @@ from fakes import RecordingDisplay, ScriptedButtons, FakeTimer, RecordingSpeaker
 
 
 def test_paddle_moves_at_its_speed_and_stays_on_screen():
-    game = pong.Pong()
+    game = pong.Pong(serve_delay_ms=0)
     y = game.paddle.y
     game.update(up=True, down=False, dt_ms=25)       # 240 px/s for 25 ms = 6 px
     assert game.paddle.y == y - 6
@@ -20,7 +20,7 @@ def test_paddle_moves_at_its_speed_and_stays_on_screen():
 
 def test_slow_frames_still_add_up():
     """Ten 4 ms frames move the paddle as far as one 40 ms frame."""
-    a, b = pong.Pong(), pong.Pong()
+    a, b = pong.Pong(serve_delay_ms=0), pong.Pong(serve_delay_ms=0)
     for _ in range(10):
         a.update(False, True, 4)
     b.update(False, True, 40)
@@ -28,21 +28,21 @@ def test_slow_frames_still_add_up():
 
 
 def test_ball_moves_at_its_speed():
-    game = pong.Pong()
+    game = pong.Pong(serve_delay_ms=0)
     x, y = game.ball.x, game.ball.y
     game.update(False, False, 50)
     assert (game.ball.x, game.ball.y) == (x - 9, y + 6)
 
 
 def test_a_stall_is_capped():
-    game = pong.Pong()
+    game = pong.Pong(serve_delay_ms=0)
     x = game.ball.x
     game.update(False, False, 1000)
     assert game.ball.x == x - 9                    # as if 50 ms had passed
 
 
 def test_ball_bounces_off_top_wall():
-    game = pong.Pong()
+    game = pong.Pong(serve_delay_ms=0)
     game.ball_y = 1
     game.vy = -120
     assert game.update(False, False, 33) == ['wall']
@@ -50,7 +50,7 @@ def test_ball_bounces_off_top_wall():
 
 
 def test_ball_bounces_off_paddle():
-    game = pong.Pong()
+    game = pong.Pong(serve_delay_ms=0)
     game.ball_x = game.paddle.right + 1
     game.ball_y = game.paddle.centery
     assert game.update(False, False, 33) == ['paddle']
@@ -59,17 +59,17 @@ def test_ball_bounces_off_paddle():
 
 
 def test_nothing_happens_in_open_space():
-    assert pong.Pong().update(False, False, 33) == []
+    assert pong.Pong(serve_delay_ms=0).update(False, False, 33) == []
 
 
 def test_status_shows_score_and_misses():
-    game = pong.Pong()
+    game = pong.Pong(serve_delay_ms=0)
     game.score, game.misses = 7, 2
     assert game.status() == 'Score 7   Missed 2'
 
 
 def test_missed_ball_is_counted_and_served_again():
-    game = pong.Pong()
+    game = pong.Pong(serve_delay_ms=0)
     game.paddle_y = 0
     game.ball_x, game.ball_y = -5, 200
     assert game.update(False, False, 33) == ['miss']
@@ -125,3 +125,27 @@ def _serve_low(self):
     self.ball.center = (60, 230)
     self.ball_x, self.ball_y = float(self.ball.x), float(self.ball.y)
     self.vx, self.vy = -180, 0
+    self.wait_ms = 0
+
+
+def test_the_ball_waits_before_each_serve_but_the_paddle_can_move():
+    game = pong.Pong(serve_delay_ms=1000)
+    ball, paddle = game.ball.copy(), game.paddle.y
+    for _ in range(30):
+        game.update(up=True, down=False, dt_ms=33)      # 990 ms
+    assert game.ball == ball
+    assert game.paddle.y < paddle
+    game.update(False, False, 33)                       # 1023 ms: still the last wait
+    game.update(False, False, 33)
+    assert game.ball != ball
+
+
+def test_the_ball_waits_again_after_a_miss():
+    game = pong.Pong(serve_delay_ms=1000)
+    game.wait_ms = 0
+    game.paddle_y = 0
+    game.ball_x, game.ball_y = -5, 200
+    assert game.update(False, False, 33) == ['miss']
+    centre = game.ball.copy()
+    game.update(False, False, 500)
+    assert game.ball == centre

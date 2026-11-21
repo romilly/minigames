@@ -21,10 +21,12 @@ PADDLE_SPEED = 240
 BALL_SPEED_X = 180
 BALL_SPEED_Y = 120
 MAX_DT_MS = 50      # after a stall, don't let the ball jump through the paddle
+SERVE_DELAY_MS = 1000   # the ball waits this long before each serve
 
 
 class Pong:
-    def __init__(self, width=320, height=240):
+    def __init__(self, width=320, height=240, serve_delay_ms=SERVE_DELAY_MS):
+        self.serve_delay_ms = serve_delay_ms
         self.bounds = pygame.Rect(0, 0, width, height)
         self.paddle = pygame.Rect(8, height // 2 - 20, 6, 40)
         self.paddle_y = float(self.paddle.y)
@@ -37,6 +39,7 @@ class Pong:
         self.ball.center = self.bounds.center
         self.ball_x, self.ball_y = float(self.ball.x), float(self.ball.y)
         self.vx, self.vy = -BALL_SPEED_X, BALL_SPEED_Y
+        self.wait_ms = self.serve_delay_ms
 
     def update(self, up, down, dt_ms):
         happened = []
@@ -49,6 +52,10 @@ class Pong:
         self.paddle.clamp_ip(self.bounds)
         if self.paddle.y != int(self.paddle_y):
             self.paddle_y = float(self.paddle.y)
+
+        if self.wait_ms > 0:              # waiting to serve: only the paddle moves
+            self.wait_ms -= dt_ms
+            return happened
 
         self.ball_x += self.vx * dt
         self.ball_y += self.vy * dt

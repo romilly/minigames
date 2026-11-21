@@ -2,8 +2,26 @@
 # Works out whether it's on an Explorer or a Presto, and wires minigame's
 # ports to that board's display, speaker and a Qw/ST Pad. With no pad, the
 # Explorer's own buttons stand in (the Presto has none to offer).
+import os
 import minigame as _mg
 from qwstpad import QwSTPad, DEFAULT_ADDRESS
+
+# Smooth text with PicoVector, if the font is on the board; otherwise bitmap8.
+FONT = '/Roboto-Medium.af'
+VECTOR_TEXT = {'explorer': False, 'presto': True}
+
+
+def _vector_text(graphics):
+    try:
+        os.stat(FONT)
+        from picovector import PicoVector, ANTIALIAS_FAST
+    except (OSError, ImportError):
+        return None
+    vector = PicoVector(graphics)
+    vector.set_antialiasing(ANTIALIAS_FAST)
+    vector.set_font(FONT, 18)
+    return _mg.VectorText(vector)
+
 
 try:
     import explorer as _explorer
@@ -12,7 +30,8 @@ except ImportError:
 
 if _explorer:
     BOARD = 'explorer'
-    _display = _mg.PicoGraphicsDisplay(_explorer.display)
+    _text = _vector_text(_explorer.display) if VECTOR_TEXT[BOARD] else None
+    _display = _mg.PicoGraphicsDisplay(_explorer.display, vector_text=_text)
     _speaker = _mg.ExplorerSpeaker(_explorer.play_tone, _explorer.stop_playing)
     _i2c = _explorer.i2c
     _fallback = _mg.PinButtons({
@@ -23,7 +42,9 @@ else:
     from presto import Presto, Buzzer
     BOARD = 'presto'
     _presto = Presto()          # 240 x 240, doubled up to fill the screen
-    _display = _mg.PicoGraphicsDisplay(_presto.display, update=_presto.update)
+    _text = _vector_text(_presto.display) if VECTOR_TEXT[BOARD] else None
+    _display = _mg.PicoGraphicsDisplay(_presto.display, update=_presto.update,
+                                       vector_text=_text)
     _speaker = _mg.BuzzerSpeaker(Buzzer(43))
     _i2c = I2C(0, sda=40, scl=41)
     _fallback = _mg.NoButtons()

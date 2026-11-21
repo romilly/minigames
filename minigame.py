@@ -244,15 +244,56 @@ class Timer:
 
 # ---- Adapters ----
 
+class VectorText:
+    """Smooth text with PicoVector and an Alright Font (.af) file.
+
+    Scale 1 is PX_PER_SCALE pixels high, so the games' sizes still work.
+    measure_text gives a bounding box, which places the top-left of the text
+    where the shim asks, whatever the font's baseline.
+    """
+    PX_PER_SCALE = 9
+    REFERENCE = 'Xg'       # tallest and deepest letters: one height for all text
+
+    def __init__(self, vector):
+        self._v = vector
+        self._tops = {}
+
+    def _size(self, scale):
+        self._v.set_font_size(self.PX_PER_SCALE * scale)
+
+    def _reference(self, scale):
+        box = self._tops.get(scale)
+        if box is None:
+            self._size(scale)
+            box = self._v.measure_text(self.REFERENCE, 0, 0)
+            self._tops[scale] = box
+        return box
+
+    def draw(self, text, x, y, scale):
+        top = self._reference(scale)[1]
+        self._size(scale)
+        left = self._v.measure_text(text, 0, 0)[0]
+        self._v.text(text, int(x - left), int(y - top))
+
+    def width(self, text, scale):
+        self._size(scale)
+        return int(self._v.measure_text(text, 0, 0)[2] + 0.5)
+
+    def height(self, scale):
+        return int(self._reference(scale)[3] + 0.5)
+
+
 class PicoGraphicsDisplay(Display):
     FONT = 'bitmap8'
     FONT_HEIGHT = 8
 
-    def __init__(self, graphics, update=None):
+    def __init__(self, graphics, update=None, vector_text=None):
         """update: what shows the frame. The Explorer uses graphics.update
-        (the default); the Presto uses presto.update."""
+        (the default); the Presto uses presto.update.
+        vector_text: a VectorText for smooth text; otherwise the bitmap8 font."""
         self._g = graphics
         self._update = update or graphics.update
+        self._vector_text = vector_text
         self._pens = {}
         self._g.set_font(self.FONT)
 
@@ -285,12 +326,19 @@ class PicoGraphicsDisplay(Display):
 
     def text(self, color, text, x, y, scale):
         self._use(color)
-        self._g.text(text, x, y, -1, scale)
+        if self._vector_text:
+            self._vector_text.draw(text, x, y, scale)
+        else:
+            self._g.text(text, x, y, -1, scale)
 
     def text_width(self, text, scale):
+        if self._vector_text:
+            return self._vector_text.width(text, scale)
         return self._g.measure_text(text, scale)
 
     def text_height(self, scale):
+        if self._vector_text:
+            return self._vector_text.height(scale)
         return self.FONT_HEIGHT * scale
 
     def update(self):
