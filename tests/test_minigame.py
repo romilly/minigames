@@ -254,3 +254,58 @@ def test_explorer_speaker_adapter():
     speaker.play(440.7)
     speaker.stop()
     assert calls == [('tone', 440), ('stop',)]
+
+
+# ---- Presto and fallback adapters ----
+
+def test_display_can_use_another_update_function():
+    g = FakeGraphics()
+    shown = []
+    d = mg.PicoGraphicsDisplay(g, update=lambda: shown.append(True))
+    d.update()
+    assert shown == [True]
+    assert ('update',) not in g.calls
+
+
+def test_buzzer_speaker_adapter():
+    class Buzzer:
+        def __init__(self):
+            self.tones = []
+
+        def set_tone(self, f):
+            self.tones.append(f)
+
+    buzzer = Buzzer()
+    speaker = mg.BuzzerSpeaker(buzzer)
+    speaker.play(440.6)
+    speaker.stop()
+    assert buzzer.tones == [440, -1]
+
+
+class FakePin:
+    def __init__(self, value=1):
+        self._value = value
+
+    def value(self):
+        return self._value
+
+
+def test_pin_buttons_are_active_low():
+    pins = {'A': FakePin(0), 'B': FakePin(1), 'C': FakePin(0), 'Y': FakePin(1)}
+    assert mg.PinButtons(pins).pressed() == {mg.K_UP, mg.K_DOWN}
+
+
+def test_pad_or_uses_the_pad_when_it_answers():
+    buttons = mg.pad_or(FakePad, mg.NoButtons(), say=None)
+    assert isinstance(buttons, mg.QwstPadButtons)
+
+
+def test_pad_or_falls_back_and_says_so_when_the_pad_is_missing():
+    said = []
+
+    def missing_pad():
+        raise OSError(5)
+
+    fallback = mg.NoButtons()
+    assert mg.pad_or(missing_pad, fallback, said.append) is fallback
+    assert 'No Qw/ST Pad' in said[0]

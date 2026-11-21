@@ -11,6 +11,7 @@ time so that you can beat it.
 import random
 
 import pygame
+from gamekit import render_fitting
 from tones import tone
 
 HUMAN, AI, EMPTY = 'X', 'O', ' '
@@ -186,9 +187,8 @@ def place_keys():
 
 # ---- Drawing ----
 
-WIDTH, HEIGHT = 320, 240
-CELL = 64
-GRID_X, GRID_Y = (WIDTH - 3 * CELL) // 2, 22
+SIZE = (320, 240)   # the desktop window; (240, 240) shows what the Presto gets
+TEXT_BAND = 20      # room for a line of text above and below the grid
 BLACK = (0, 0, 0)
 WHITE = (255, 255, 255)
 GREY = (120, 120, 120)
@@ -197,38 +197,51 @@ WIN = (0, 110, 0)
 COLOURS = {HUMAN: (255, 220, 0), AI: (0, 220, 255)}
 
 
-def cell_rect(square):
-    row, col = divmod(square, 3)
-    return pygame.Rect(GRID_X + col * CELL, GRID_Y + row * CELL, CELL, CELL)
+class Layout:
+    """Where things go on a screen of a given size."""
+
+    def __init__(self, width, height):
+        self.width, self.height = width, height
+        self.cell = min(width, height - 2 * TEXT_BAND - 4) // 3
+        self.grid_x = (width - 3 * self.cell) // 2
+        self.grid_y = (height - 3 * self.cell) // 2
+
+    def cell_rect(self, square):
+        row, col = divmod(square, 3)
+        return pygame.Rect(self.grid_x + col * self.cell, self.grid_y + row * self.cell,
+                           self.cell, self.cell)
 
 
-def draw(screen, game, small, big):
+def draw(screen, game, layout, fonts, big):
     screen.fill(BLACK)
     if game.turn == HUMAN and not game.result:
-        pygame.draw.rect(screen, CURSOR, cell_rect(game.cursor))
+        pygame.draw.rect(screen, CURSOR, layout.cell_rect(game.cursor))
     line = winning_line(game.board)
     for square in line or ():
-        pygame.draw.rect(screen, WIN, cell_rect(square))
+        pygame.draw.rect(screen, WIN, layout.cell_rect(square))
+    x, y, cell = layout.grid_x, layout.grid_y, layout.cell
     for i in (1, 2):
-        pygame.draw.rect(screen, GREY, (GRID_X + i * CELL - 1, GRID_Y, 2, 3 * CELL))
-        pygame.draw.rect(screen, GREY, (GRID_X, GRID_Y + i * CELL - 1, 3 * CELL, 2))
+        pygame.draw.rect(screen, GREY, (x + i * cell - 1, y, 2, 3 * cell))
+        pygame.draw.rect(screen, GREY, (x, y + i * cell - 1, 3 * cell, 2))
     for square in range(9):
         mark = game.board[square]
         if mark != EMPTY:
             text = big.render(mark, False, COLOURS[mark])
-            screen.blit(text, text.get_rect(center=cell_rect(square).center))
-    text = small.render(game.status(), False, WHITE)
-    screen.blit(text, text.get_rect(centerx=WIDTH // 2, top=2))
-    text = small.render(game.score_line(), False, GREY)
-    screen.blit(text, text.get_rect(centerx=WIDTH // 2, bottom=HEIGHT - 2))
+            screen.blit(text, text.get_rect(center=layout.cell_rect(square).center))
+    room = layout.width - 4
+    text = render_fitting(fonts, game.status(), WHITE, room)
+    screen.blit(text, text.get_rect(centerx=layout.width // 2, top=2))
+    text = render_fitting(fonts, game.score_line(), GREY, room)
+    screen.blit(text, text.get_rect(centerx=layout.width // 2, bottom=layout.height - 2))
 
 
-def main(fps=30, game=None):
+def main(fps=30, game=None, size=SIZE):
     pygame.init()
-    screen = pygame.display.set_mode((WIDTH, HEIGHT))
+    screen = pygame.display.set_mode(size)
+    layout = Layout(*screen.get_size())     # on a board, the board's own size
     clock = pygame.time.Clock()
-    small = pygame.font.Font(None, 24)
-    big = pygame.font.Font(None, 72)
+    fonts = [pygame.font.Font(None, 24), pygame.font.Font(None, 16)]
+    big = pygame.font.Font(None, layout.cell * 9 // 8)
     sounds = {'move': tone(1200, 10), 'bump': tone(150, 60),
               'place': tone(880, 50), 'new': tone(660, 50),
               'win': tone(1320, 400), 'lose': tone(110, 400), 'draw': tone(330, 300)}
@@ -248,7 +261,7 @@ def main(fps=30, game=None):
         happened += game.update(dt)
         for what in happened:
             sounds[what].play()
-        draw(screen, game, small, big)
+        draw(screen, game, layout, fonts, big)
         pygame.display.flip()
         dt = clock.tick(fps)
     pygame.quit()

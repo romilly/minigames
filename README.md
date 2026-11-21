@@ -1,6 +1,6 @@
 # minigames
 
-Games for the Pimoroni Explorer (RP2350), written against a small subset of
+Games for the Pimoroni Explorer and Presto (both RP2350), written against a small subset of
 pygame (`minigame.py`) for MicroPython, with a Qw/ST Pad as the controller. A game written against the subset runs
 unchanged on a desktop under real pygame.
 
@@ -23,8 +23,14 @@ The script copies `minigame.py` and the games to `/`, `board/pygame.py` to
 `/pygame.py`, and installs Pimoroni's `qwstpad` into `/lib` if it isn't there.
 Set `MPR_DEVICE` (e.g. `/dev/ttyACM0`) if more than one board is plugged in.
 
+`board/pygame.py` works out which board it's on. The Presto runs in its
+240 x 240 mode (doubled up to fill the screen); the games size themselves from
+`screen.get_size()`. If the pad doesn't answer, it says so and the Explorer's
+own buttons stand in: A up, C down, X left, Z right, B select (like the pad's
+A), Y Enter. The Presto has no spare buttons, so it needs the pad.
+
 ## On the desktop
-`python pong.py` with pygame installed. Arrow keys, Esc to quit.
+`python pong.py` with pygame installed. Arrow keys, Esc to quit. Set `SIZE = (240, 240)` at the top of a game to see the Presto's shape.
 
 ## Tests
 `pytest` (needs pygame: the Rect tests run against both implementations).

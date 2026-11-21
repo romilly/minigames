@@ -11,9 +11,10 @@ update() returns what happened ('paddle', 'wall', 'miss'), and main()
 plays a sound for each.
 """
 import pygame
+from gamekit import render_fitting
 from tones import tone
 
-WIDTH, HEIGHT = 320, 240
+SIZE = (320, 240)   # the desktop window; (240, 240) shows what the Presto gets
 BLACK = (0, 0, 0)
 WHITE = (255, 255, 255)
 PADDLE_SPEED = 240
@@ -23,7 +24,7 @@ MAX_DT_MS = 50      # after a stall, don't let the ball jump through the paddle
 
 
 class Pong:
-    def __init__(self, width=WIDTH, height=HEIGHT):
+    def __init__(self, width=320, height=240):
         self.bounds = pygame.Rect(0, 0, width, height)
         self.paddle = pygame.Rect(8, height // 2 - 20, 6, 40)
         self.paddle_y = float(self.paddle.y)
@@ -74,21 +75,22 @@ class Pong:
     def status(self):
         return 'Score %d   Missed %d' % (self.score, self.misses)
 
-    def draw(self, screen, font):
+    def draw(self, screen, fonts):
         screen.fill(BLACK)
-        text = font.render(self.status(), False, WHITE)
+        text = render_fitting(fonts, self.status(), WHITE, self.bounds.width - 4)
         screen.blit(text, text.get_rect(centerx=self.bounds.centerx, top=4))
         pygame.draw.rect(screen, WHITE, self.paddle)
         pygame.draw.rect(screen, WHITE, self.ball)
 
 
-def main(fps=30):
+def main(fps=30, size=SIZE):
     pygame.init()
-    screen = pygame.display.set_mode((WIDTH, HEIGHT))
+    screen = pygame.display.set_mode(size)
+    width, height = screen.get_size()      # on a board, the board's own size
     clock = pygame.time.Clock()
-    font = pygame.font.Font(None, 24)
+    fonts = [pygame.font.Font(None, 24), pygame.font.Font(None, 16)]
     sounds = {'paddle': tone(880, 40), 'wall': tone(440, 40), 'miss': tone(110, 300)}
-    game = Pong()
+    game = Pong(width, height)
     running = True
     dt = 0
     while running:
@@ -100,7 +102,7 @@ def main(fps=30):
         keys = pygame.key.get_pressed()
         for what in game.update(keys[pygame.K_UP], keys[pygame.K_DOWN], dt):
             sounds[what].play()
-        game.draw(screen, font)
+        game.draw(screen, fonts)
         pygame.display.flip()
         dt = clock.tick(fps)
     pygame.quit()

@@ -248,8 +248,11 @@ class PicoGraphicsDisplay(Display):
     FONT = 'bitmap8'
     FONT_HEIGHT = 8
 
-    def __init__(self, graphics):
+    def __init__(self, graphics, update=None):
+        """update: what shows the frame. The Explorer uses graphics.update
+        (the default); the Presto uses presto.update."""
         self._g = graphics
+        self._update = update or graphics.update
         self._pens = {}
         self._g.set_font(self.FONT)
 
@@ -291,7 +294,7 @@ class PicoGraphicsDisplay(Display):
         return self.FONT_HEIGHT * scale
 
     def update(self):
-        self._g.update()
+        self._update()
 
 
 class QwstPadButtons(Buttons):
@@ -317,6 +320,51 @@ class ExplorerSpeaker(Speaker):
 
     def stop(self):
         self._stop_playing()
+
+
+class BuzzerSpeaker(Speaker):
+    """Adapts the Presto's Buzzer (set_tone(f); set_tone(-1) is silence)."""
+
+    def __init__(self, buzzer):
+        self._buzzer = buzzer
+
+    def play(self, frequency):
+        self._buzzer.set_tone(int(frequency))
+
+    def stop(self):
+        self._buzzer.set_tone(-1)
+
+
+# The Explorer's own buttons, for when there's no pad. Left column A, B, C;
+# right column X, Y, Z.
+EXPLORER_KEYS = {'A': K_UP, 'B': K_a, 'C': K_DOWN,
+                 'X': K_LEFT, 'Y': K_RETURN, 'Z': K_RIGHT}
+
+
+class PinButtons(Buttons):
+    """Buttons on GPIO pins that read 0 when pressed, like the Explorer's."""
+
+    def __init__(self, pins, keys=EXPLORER_KEYS):
+        self._pins = pins          # {'A': Pin, ...}
+        self._keys = keys
+
+    def pressed(self):
+        return set(self._keys[name] for name in self._pins
+                   if self._pins[name].value() == 0)
+
+
+class NoButtons(Buttons):
+    def pressed(self):
+        return set()
+
+
+def pad_or(make_pad, fallback, say=print):
+    """The pad's Buttons if it answers, otherwise the fallback."""
+    try:
+        return QwstPadButtons(make_pad())
+    except OSError:
+        say('No Qw/ST Pad found: check the cable. Using the board instead.')
+        return fallback
 
 
 class TicksTimer(Timer):

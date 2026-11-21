@@ -1,13 +1,35 @@
-# Copy to the Explorer as pygame.py, alongside minigame.py and qwstpad.py.
-# Wires minigame's ports to the Explorer's display and a Qw/ST Pad.
-from explorer import display as _lcd, i2c as _i2c, play_tone, stop_playing
-from qwstpad import QwSTPad, DEFAULT_ADDRESS
+# Copy to the board as pygame.py, alongside minigame.py and qwstpad.py.
+# Works out whether it's on an Explorer or a Presto, and wires minigame's
+# ports to that board's display, speaker and a Qw/ST Pad. With no pad, the
+# Explorer's own buttons stand in (the Presto has none to offer).
 import minigame as _mg
+from qwstpad import QwSTPad, DEFAULT_ADDRESS
 
-_pg = _mg.Pygame(_mg.PicoGraphicsDisplay(_lcd),
-                 _mg.QwstPadButtons(QwSTPad(_i2c, DEFAULT_ADDRESS)),
-                 _mg.TicksTimer(),
-                 _mg.ExplorerSpeaker(play_tone, stop_playing))
+try:
+    import explorer as _explorer
+except ImportError:
+    _explorer = None
+
+if _explorer:
+    BOARD = 'explorer'
+    _display = _mg.PicoGraphicsDisplay(_explorer.display)
+    _speaker = _mg.ExplorerSpeaker(_explorer.play_tone, _explorer.stop_playing)
+    _i2c = _explorer.i2c
+    _fallback = _mg.PinButtons({
+        'A': _explorer.button_a, 'B': _explorer.button_b, 'C': _explorer.button_c,
+        'X': _explorer.button_x, 'Y': _explorer.button_y, 'Z': _explorer.button_z})
+else:
+    from machine import I2C
+    from presto import Presto, Buzzer
+    BOARD = 'presto'
+    _presto = Presto()          # 240 x 240, doubled up to fill the screen
+    _display = _mg.PicoGraphicsDisplay(_presto.display, update=_presto.update)
+    _speaker = _mg.BuzzerSpeaker(Buzzer(43))
+    _i2c = I2C(0, sda=40, scl=41)
+    _fallback = _mg.NoButtons()
+
+_buttons = _mg.pad_or(lambda: QwSTPad(_i2c, DEFAULT_ADDRESS), _fallback)
+_pg = _mg.Pygame(_display, _buttons, _mg.TicksTimer(), _speaker)
 
 Rect = _mg.Rect
 Surface = _mg.Surface
