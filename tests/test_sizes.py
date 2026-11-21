@@ -40,7 +40,10 @@ def test_pong_fits(monkeypatch, size):
     pg = fake_pygame(display=display, buttons=ScriptedButtons(*([set()] * 10 + [{mg.K_ESCAPE}])))
     pong = load_on_shim(monkeypatch, 'pong', pg)
     game = pong.main()
-    assert (game.bounds.width, game.bounds.height) == size
+    assert (game.width, game.bounds.bottom) == size
+    texts = [c for c in display.calls if c[0] == 'text']
+    status_bottom = texts[0][4] + display.text_height(texts[0][5])
+    assert status_bottom <= game.bounds.top          # the score sits above the play area
     assert off_screen(display) == []
 
 

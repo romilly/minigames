@@ -9,6 +9,8 @@ from qwstpad import QwSTPad, DEFAULT_ADDRESS
 # Smooth text with PicoVector, if the font is on the board; otherwise bitmap8.
 FONT = '/Roboto-Medium.af'
 VECTOR_TEXT = {'explorer': False, 'presto': True}
+# The Presto's piezo is quiet; higher notes are louder. 2 = an octave up.
+PRESTO_PITCH = 2
 
 
 def _vector_text(graphics):
@@ -45,7 +47,7 @@ else:
     _text = _vector_text(_presto.display) if VECTOR_TEXT[BOARD] else None
     _display = _mg.PicoGraphicsDisplay(_presto.display, update=_presto.update,
                                        vector_text=_text)
-    _speaker = _mg.BuzzerSpeaker(Buzzer(43))
+    _speaker = _mg.BuzzerSpeaker(Buzzer(43), pitch=PRESTO_PITCH)
     _i2c = I2C(0, sda=40, scl=41)
     _fallback = _mg.NoButtons()
 

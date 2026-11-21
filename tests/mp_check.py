@@ -44,7 +44,7 @@ sys.modules['pygame'] = pg
 import pong
 game = pong.main()
 assert display.frames == 4, display.frames
-assert game.paddle.y < 100, game.paddle.y
+assert game.paddle.centery < game.bounds.centery, game.paddle.y
 print('MicroPython check passed')
 
 
@@ -76,7 +76,7 @@ for name in ('pong', 'tones', 'gamekit'):
     sys.modules.pop(name, None)
 import pong
 game = pong.main()
-assert (game.bounds.width, game.bounds.height) == (240, 240)
+assert (game.width, game.bounds.bottom) == (240, 240)
 
 
 class Pin:

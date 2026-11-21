@@ -279,7 +279,8 @@ def test_buzzer_speaker_adapter():
     speaker = mg.BuzzerSpeaker(buzzer)
     speaker.play(440.6)
     speaker.stop()
-    assert buzzer.tones == [440, -1]
+    mg.BuzzerSpeaker(buzzer, pitch=2).play(440)
+    assert buzzer.tones == [440, -1, 880]
 
 
 class FakePin:
@@ -331,14 +332,14 @@ class FakeVector:
         self.drawn.append((text, x, y, self.size))
 
 
-def test_vector_text_puts_the_top_left_where_asked():
+def test_vector_text_puts_the_top_of_the_capitals_where_asked():
     vector = FakeVector()
     d = mg.PicoGraphicsDisplay(FakeGraphics(), vector_text=mg.VectorText(vector))
     d.text((255, 255, 255), 'Hi', 10, 20, 2)
-    # size 18; box starts 1 px right and 14.4 px up, so draw at (9, 34)
-    assert vector.drawn == [('Hi', 9, 34, 18)]
+    # size 18: the baseline goes 0.95 * 18 = 17.1 px below the top
+    assert vector.drawn == [('Hi', 10, 37, 18)]
     assert d.text_width('Hi', 2) == 18
-    assert d.text_height(2) == 18
+    assert d.text_height(2) == 22          # 1.2 * 18, room for descenders
 
 
 def test_vector_text_size_follows_the_scale():

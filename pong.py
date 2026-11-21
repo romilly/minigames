@@ -17,6 +17,7 @@ from tones import tone
 SIZE = (320, 240)   # the desktop window; (240, 240) shows what the Presto gets
 BLACK = (0, 0, 0)
 WHITE = (255, 255, 255)
+GREY = (120, 120, 120)
 PADDLE_SPEED = 240
 BALL_SPEED_X = 180
 BALL_SPEED_Y = 120
@@ -25,10 +26,13 @@ SERVE_DELAY_MS = 1000   # the ball waits this long before each serve
 
 
 class Pong:
-    def __init__(self, width=320, height=240, serve_delay_ms=SERVE_DELAY_MS):
+    def __init__(self, width=320, height=240, top=0, serve_delay_ms=SERVE_DELAY_MS):
+        """top: how much of the screen the score line takes; play is below it."""
         self.serve_delay_ms = serve_delay_ms
-        self.bounds = pygame.Rect(0, 0, width, height)
-        self.paddle = pygame.Rect(8, height // 2 - 20, 6, 40)
+        self.width = width
+        self.bounds = pygame.Rect(0, top, width, height - top)
+        self.paddle = pygame.Rect(8, 0, 6, 40)
+        self.paddle.centery = self.bounds.centery
         self.paddle_y = float(self.paddle.y)
         self.score = 0
         self.misses = 0
@@ -60,7 +64,7 @@ class Pong:
         self.ball_x += self.vx * dt
         self.ball_y += self.vy * dt
         self.ball.x, self.ball.y = int(self.ball_x), int(self.ball_y)
-        if self.ball.top <= 0 and self.vy < 0:
+        if self.ball.top <= self.bounds.top and self.vy < 0:
             self.vy = -self.vy
             happened.append('wall')
         if self.ball.bottom >= self.bounds.bottom and self.vy > 0:
@@ -84,8 +88,11 @@ class Pong:
 
     def draw(self, screen, fonts):
         screen.fill(BLACK)
-        text = render_fitting(fonts, self.status(), WHITE, self.bounds.width - 4)
-        screen.blit(text, text.get_rect(centerx=self.bounds.centerx, top=4))
+        text = render_fitting(fonts, self.status(), WHITE, self.width - 4)
+        screen.blit(text, text.get_rect(centerx=self.width // 2,
+                                         centery=self.bounds.top // 2))
+        if self.bounds.top:
+            pygame.draw.rect(screen, GREY, (0, self.bounds.top - 1, self.width, 1))
         pygame.draw.rect(screen, WHITE, self.paddle)
         pygame.draw.rect(screen, WHITE, self.ball)
 
@@ -97,7 +104,8 @@ def main(fps=30, size=SIZE):
     clock = pygame.time.Clock()
     fonts = [pygame.font.Font(None, 24), pygame.font.Font(None, 16)]
     sounds = {'paddle': tone(880, 40), 'wall': tone(440, 40), 'miss': tone(110, 300)}
-    game = Pong(width, height)
+    top = fonts[0].size('Score')[1] + 6     # room for the score line
+    game = Pong(width, height, top)
     running = True
     dt = 0
     while running:

@@ -98,7 +98,8 @@ def test_main_runs_on_the_shim_until_minus_is_pressed(monkeypatch):
     assert timer.slept == [40] * 5          # no work takes time with fakes
     # frames 1 and 2 have dt 0 (the first tick only starts the clock);
     # frames 3-5 hold UP for 40 ms each at 240 px/s: 3 * 9.6 px
-    assert game.paddle.y == int(100 - 3 * 9.6)
+    start = game.bounds.centery - 20
+    assert game.paddle.y == int(start - 3 * 9.6)
     assert display.calls[0] == ('fill', (0, 0, 0))
     assert display.calls[1][:3] == ('text', (255, 255, 255), 'Score 0   Missed 0')
 
@@ -149,3 +150,20 @@ def test_the_ball_waits_again_after_a_miss():
     centre = game.ball.copy()
     game.update(False, False, 500)
     assert game.ball == centre
+
+
+def test_the_ball_bounces_off_the_line_under_the_score():
+    game = pong.Pong(320, 240, top=24, serve_delay_ms=0)
+    assert game.bounds.top == 24
+    assert game.ball.center == game.bounds.center
+    game.ball_y = 25
+    game.vy = -120
+    assert game.update(False, False, 33) == ['wall']
+    assert game.vy > 0
+
+
+def test_the_paddle_stays_below_the_score():
+    game = pong.Pong(320, 240, top=24, serve_delay_ms=0)
+    for _ in range(100):
+        game.update(up=True, down=False, dt_ms=33)
+    assert game.paddle.top == 24

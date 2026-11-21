@@ -115,6 +115,7 @@ def test_on_the_presto(monkeypatch):
     board.display.flip()
     assert presto.updates == [True]
     board.tone(440, 10).play()
+    assert board._speaker._buzzer.tones == [880]        # an octave up
     board.quit()
 
 
@@ -183,7 +184,7 @@ def test_presto_text_uses_the_vector_font_when_it_is_there(monkeypatch):
     assert vector.antialiasing == picovector.ANTIALIAS_FAST
     screen = board.display.set_mode((0, 0))
     screen.blit(board.font.Font(None, 24).render('Hi', False, (255, 255, 255)), (10, 20))
-    assert vector.drawn == [('Hi', 10, 38)]
+    assert vector.drawn == [('Hi', 10, 37)]      # baseline 0.95 * 18 below the top
 
 
 def test_presto_falls_back_to_bitmap_text_without_the_font(monkeypatch):

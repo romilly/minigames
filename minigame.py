@@ -247,40 +247,36 @@ class Timer:
 class VectorText:
     """Smooth text with PicoVector and an Alright Font (.af) file.
 
-    Scale 1 is PX_PER_SCALE pixels high, so the games' sizes still work.
-    measure_text gives a bounding box, which places the top-left of the text
-    where the shim asks, whatever the font's baseline.
+    PicoVector draws text with y as the baseline. Its measure_text box is
+    unreliable vertically (pimoroni-pico's af_measure stores a glyph's right
+    and bottom edges as its width and height), so vertical placement comes
+    from the font size: Roboto's capitals reach about ASCENT of the size above
+    the baseline, and a line with descenders is about LINE of it.
+    measure_text is only used for widths, where the error is a pixel or so.
+    Scale 1 is PX_PER_SCALE pixels, so the games' sizes still work.
     """
     PX_PER_SCALE = 9
-    REFERENCE = 'Xg'       # tallest and deepest letters: one height for all text
+    ASCENT = 0.95
+    LINE = 1.2
 
     def __init__(self, vector):
         self._v = vector
-        self._tops = {}
 
     def _size(self, scale):
-        self._v.set_font_size(self.PX_PER_SCALE * scale)
-
-    def _reference(self, scale):
-        box = self._tops.get(scale)
-        if box is None:
-            self._size(scale)
-            box = self._v.measure_text(self.REFERENCE, 0, 0)
-            self._tops[scale] = box
-        return box
+        size = self.PX_PER_SCALE * scale
+        self._v.set_font_size(size)
+        return size
 
     def draw(self, text, x, y, scale):
-        top = self._reference(scale)[1]
-        self._size(scale)
-        left = self._v.measure_text(text, 0, 0)[0]
-        self._v.text(text, int(x - left), int(y - top))
+        size = self._size(scale)
+        self._v.text(text, int(x), int(y + self.ASCENT * size + 0.5))
 
     def width(self, text, scale):
         self._size(scale)
         return int(self._v.measure_text(text, 0, 0)[2] + 0.5)
 
     def height(self, scale):
-        return int(self._reference(scale)[3] + 0.5)
+        return int(self.LINE * self.PX_PER_SCALE * scale + 0.5)
 
 
 class PicoGraphicsDisplay(Display):
@@ -371,13 +367,17 @@ class ExplorerSpeaker(Speaker):
 
 
 class BuzzerSpeaker(Speaker):
-    """Adapts the Presto's Buzzer (set_tone(f); set_tone(-1) is silence)."""
+    """Adapts the Presto's Buzzer (set_tone(f); set_tone(-1) is silence).
 
-    def __init__(self, buzzer):
+    pitch multiplies every frequency: a piezo is loudest near its resonant
+    frequency (a few kHz), so playing higher makes it sound louder."""
+
+    def __init__(self, buzzer, pitch=1):
         self._buzzer = buzzer
+        self._pitch = pitch
 
     def play(self, frequency):
-        self._buzzer.set_tone(int(frequency))
+        self._buzzer.set_tone(int(frequency * self._pitch))
 
     def stop(self):
         self._buzzer.set_tone(-1)
