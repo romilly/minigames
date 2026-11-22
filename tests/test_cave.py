@@ -114,10 +114,11 @@ def test_view_looks_ahead_until_a_wall():
     # Facing east from A: (2,1) and (3,1) are open, (4,1) is wall.
     game = Cave(Maze(dict(SPEC, start={'at': 'A', 'facing': 'east'})))
     view = game.view()
-    # Each slice: (wall on the left, wall on the right, wall ahead)
-    assert view == [(True, False, False),   # at A: north wall, south (1,2) open
-                    (True, True, False),    # (2,1): (2,2) is wall
-                    (True, False, True)]    # (3,1): (3,2) open, (4,1) wall
+    # Each slice: what's on the left, on the right and ahead: WALL, DOOR or None
+    W = cave.WALL
+    assert view == [(W, None, None),        # at A: north wall, south (1,2) open
+                    (W, W, None),           # (2,1): (2,2) is wall
+                    (W, None, W)]           # (3,1): (3,2) open, (4,1) wall
 
 
 def test_what_you_have_seen_is_remembered():
@@ -444,3 +445,99 @@ def test_only_as_many_items_as_fit_are_offered():
     menu = cave.Menu()
     menu.show([(str(i), i) for i in range(20)], layout.menu_rows)
     assert len(menu.items) == layout.menu_rows
+
+
+
+# ---- Keys and doors ----
+
+DOOR = {
+    'start': {'at': 'A', 'facing': 'east'},
+    'map': '#######\n'
+           '#A F B#\n'
+           '#######\n',
+    'rooms': {'F': {'name': 'Iron door', 'description': 'A heavy door.', 'needs': 'key'},
+              'B': {'name': 'Vault', 'goal': True}},
+    'objects': {'key': {'name': 'iron key', 'at': 'A'}},
+}
+
+
+def test_a_door_needs_an_object_the_maze_has():
+    rooms = dict(DOOR['rooms'], F={'needs': 'crowbar'})
+    with pytest.raises(ValueError, match='crowbar'):
+        Maze(dict(DOOR, rooms=rooms))
+
+
+def test_a_locked_door_bars_the_way():
+    game = Cave(Maze(DOOR))
+    game.act('forward')
+    assert game.act('forward') == ['locked']
+    assert game.position == (2, 1)
+    assert game.message == 'The iron door is locked.'
+
+
+def test_the_key_unlocks_the_door_and_it_stays_unlocked():
+    game = Cave(Maze(DOOR))
+    game.do(('take', 'key'))
+    game.act('forward')
+    assert game.act('forward') == ['unlock']
+    assert game.position == (3, 1)
+    assert game.message == 'You unlock the iron door with the iron key.'
+    game.do(('drop', 'key'))
+    game.act('around'), game.act('forward')
+    game.act('around')
+    assert game.act('forward') == ['step']               # back through, without the key
+
+
+def test_a_locked_door_blocks_the_view_and_an_open_one_does_not():
+    game = Cave(Maze(DOOR))
+    assert game.view() == [(cave.WALL, cave.WALL, None),
+                           (cave.WALL, cave.WALL, cave.DOOR)]
+    assert (5, 1) not in game.seen
+    game.do(('take', 'key'))
+    game.act('forward'), game.act('forward')
+    assert (5, 1) in game.seen
+
+
+def test_starting_again_locks_the_doors():
+    game = Cave(Maze(DOOR))
+    game.do(('take', 'key'))
+    game.act('forward'), game.act('forward')
+    game.restart()
+    game.act('forward')
+    assert game.act('forward') == ['locked']
+
+
+def test_a_door_can_be_the_goal_side_of_the_maze():
+    game = Cave(Maze(DOOR))
+    game.do(('take', 'key'))
+    assert [game.act('forward') for _ in range(4)] == [['step'], ['unlock'], ['step'], ['win']]
+
+
+def reachable(maze, start, open_doors):
+    """Every (x, y, level) you can walk to, with these door letters open."""
+    seen, todo = {start}, [start]
+    while todo:
+        x, y, level = todo.pop()
+        for dx, dy in cave.STEPS:
+            nx, ny = x + dx, y + dy
+            here = maze.cell(nx, ny, level)
+            room = maze.rooms.get(here)
+            if here == cave.WALL or (room and room.get('needs') and here not in open_doors):
+                continue
+            nlevel = level + (1 if here == cave.DOWN else -1 if here == cave.UP else 0)
+            if (nx, ny, nlevel) not in seen:
+                seen.add((nx, ny, nlevel))
+                todo.append((nx, ny, nlevel))
+    return seen
+
+
+def test_the_sample_maze_can_be_won_but_only_with_the_key():
+    with open('mazes/mine.yaml') as f:
+        maze = Maze(yaml.safe_load(f))
+    start = maze.start + (maze.start_level,)
+    goal = maze.find('E')
+    assert goal not in reachable(maze, start, set())
+    assert maze.object_starts['key'] in reachable(maze, start, set())
+    assert goal in reachable(maze, start, {'F'})
+    everything = reachable(maze, start, {'F'})
+    assert all(maze.object_starts[t] in everything for t in maze.objects)

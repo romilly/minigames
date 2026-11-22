@@ -146,3 +146,12 @@ x, y, w, h = layout.menu_item_rect(0)
 assert cave.handle(Ev(mg.MOUSEBUTTONDOWN, pos=(x + 5, y + 5)), game, menu, layout) == ['take']
 assert game.carried() == ['gem'] and game.treasure() == 7
 print('MicroPython cave treasure check passed')
+
+door = {'start': {'at': 'A', 'facing': 'east'}, 'map': '#####\n#AFB#\n#####',
+        'rooms': {'F': {'name': 'Gate', 'needs': 'key'}, 'B': {'goal': True}},
+        'objects': {'key': {'name': 'key', 'at': 'A'}}}
+game = cave.Cave(cave.Maze(door))
+assert game.act('forward') == ['locked'], game.message
+game.do(('take', 'key'))
+assert game.act('forward') == ['unlock'] and game.act('forward') == ['win']
+print('MicroPython cave door check passed')

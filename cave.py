@@ -23,6 +23,7 @@ WALL = '#'
 DOWN, UP = '>', '<'        # steps to the level below, and above
 DEPTH = 4                  # how many cells ahead you can see
 CARRIED = 'carried'        # where an object you're carrying is
+DOOR = 'door'              # what a locked door looks like in view()
 PASSAGE = 'A dark passage.'
 STEPS_DOWN = 'Steps lead down into the dark.'
 STEPS_UP = 'Steps lead up.'
@@ -56,6 +57,11 @@ class Maze:
         self.objects = spec.get('objects') or {}
         self.object_starts = dict((name, self.place(self.objects[name].get('at')))
                                   for name in self.objects)
+        for letter in self.rooms:
+            needs = self.rooms[letter].get('needs')
+            if needs is not None and needs not in self.objects:
+                raise ValueError('room %r needs %r, which is not one of the objects'
+                                 % (letter, needs))
         start = spec.get('start') or {}
         if start.get('at') is None:
             x, y, self.start_level = self._first_open_cell()
@@ -139,6 +145,7 @@ class Cave:
         self.facing = self.maze.start_facing
         self._seen = [set() for _ in self.maze.levels]
         self._where = dict(self.maze.object_starts)   # name -> (x, y, level) or CARRIED
+        self.unlocked = set()                          # letters of doors you've opened
         self.won = False
         self.message = None                            # shown instead of the description
         self._look()
@@ -148,8 +155,21 @@ class Cave:
         """The cells you've seen on this level."""
         return self._seen[self.level]
 
-    def _wall(self, cell):
-        return self.maze.is_wall(cell[0], cell[1], self.level)
+    def _blocked(self, cell):
+        """What stops you going into cell: WALL, DOOR (locked) or None."""
+        here = self.maze.cell(cell[0], cell[1], self.level)
+        if here == WALL:
+            return WALL
+        if self._needs(here) and here not in self.unlocked:
+            return DOOR
+        return None
+
+    def _needs(self, letter):
+        room = self.maze.rooms.get(letter)
+        return room.get('needs') if room else None
+
+    def _door_name(self, letter):
+        return self.maze.rooms[letter].get('name', 'door').lower()
 
     def act(self, action):
         """'left', 'right', 'around' or 'forward'. Returns what happened, for sounds."""
@@ -159,8 +179,20 @@ class Cave:
         self.message = None
         if action == 'forward':
             x, y = self._ahead(self.position)
-            if self._wall((x, y)):
+            blocked = self._blocked((x, y))
+            happened = ['step']
+            if blocked == WALL:
                 return ['bump']
+            if blocked == DOOR:
+                letter = self.maze.cell(x, y, self.level)
+                key = self._needs(letter)
+                if key not in self.carried():
+                    self.message = 'The %s is locked.' % self._door_name(letter)
+                    return ['locked']
+                self.unlocked.add(letter)
+                self.message = 'You unlock the %s with the %s.' % (
+                    self._door_name(letter), self.name_of(key))
+                happened = ['unlock']
             self.position = (x, y)
             here = self.maze.cell(x, y, self.level)
             if here in (DOWN, UP):
@@ -172,7 +204,7 @@ class Cave:
             if room and room.get('goal'):
                 self.won = True
                 return ['win']
-            return ['step']
+            return happened
         turns = {'left': 3, 'right': 1, 'around': 2}
         if action not in turns:
             return []
@@ -274,18 +306,19 @@ class Cave:
         return found
 
     def view(self):
-        """What's ahead, nearest first: for each cell up to DEPTH ahead,
-        (wall on the left, wall on the right, wall ahead). Stops at a wall."""
+        """What's ahead, nearest first: for each cell up to DEPTH ahead, what's
+        on the left, on the right and ahead: WALL, DOOR or None (open).
+        Stops at a wall or a locked door."""
         slices = []
         for cell in self._cells_ahead():
-            slices.append((self._wall(self._side(cell, -1)),
-                           self._wall(self._side(cell, 1)),
-                           self._wall(self._ahead(cell))))
+            slices.append((self._blocked(self._side(cell, -1)),
+                           self._blocked(self._side(cell, 1)),
+                           self._blocked(self._ahead(cell))))
         return slices
 
     def _cells_ahead(self):
         cells = [self.position]
-        while len(cells) < DEPTH and not self._wall(self._ahead(cells[-1])):
+        while len(cells) < DEPTH and not self._blocked(self._ahead(cells[-1])):
             cells.append(self._ahead(cells[-1]))
         return cells
 
@@ -408,6 +441,8 @@ FLOOR = (50, 100, 50)
 ROOM = (70, 140, 140)
 GOAL = (200, 180, 40)
 TREASURE_GLINT = (255, 215, 60)
+DOOR_COLOUR = (140, 90, 40)
+DOOR_OPEN = (110, 80, 50)
 MENU_BG = (20, 25, 45)
 MENU_SELECTED = (60, 70, 120)
 STAIRS_DOWN = (90, 60, 120)
@@ -463,6 +498,11 @@ class Layout:
         return cx - hw, cy - hh, cx + hw, cy + hh
 
 
+def surface(blocked):
+    """The colour of what blocks the way: rock, or a locked door."""
+    return DOOR_COLOUR if blocked == DOOR else ROCK
+
+
 def shade(colour, depth):
     k = 1 - 0.17 * depth
     return (int(colour[0] * k), int(colour[1] * k), int(colour[2] * k))
@@ -492,10 +532,15 @@ def draw_view(screen, game, layout):
         x0, y0, x1, y1 = layout.frame(depth)
         a0, b0, a1, b1 = layout.frame(depth + 1)
         if ahead:
-            face(screen, shade(ROCK, depth + 1), [(a0, b0), (a1, b0), (a1, b1), (a0, b1)])
+            face(screen, shade(surface(ahead), depth + 1),
+                 [(a0, b0), (a1, b0), (a1, b1), (a0, b1)])
+            if ahead == DOOR:                    # a keyhole
+                kx, ky = (a0 + a1) // 2, (b0 + b1) // 2
+                r = max(1, (a1 - a0) // 16)
+                pygame.draw.rect(screen, EDGE, (kx - r, ky - r, 2 * r, 3 * r))
         for wall, outer, inner in ((left, x0, a0), (right, x1, a1)):
             if wall:
-                face(screen, shade(ROCK, depth + 0.5),
+                face(screen, shade(surface(wall), depth + 0.5),
                      [(outer, y0), (inner, b0), (inner, b1), (outer, y1)])
             else:                                # an opening: the far wall of a side passage
                 face(screen, shade(ROCK, depth + 1),
@@ -548,6 +593,8 @@ def draw_map(screen, game, layout):
             colour = STAIRS_DOWN
         elif here == UP:
             colour = STAIRS_UP
+        elif room and room.get('needs'):
+            colour = DOOR_OPEN if here in game.unlocked else DOOR_COLOUR
         elif room and room.get('goal'):
             colour = GOAL
         elif room:
@@ -662,7 +709,8 @@ def main(fps=30, game=None, size=SIZE, maze=MAZE):
     clock = pygame.time.Clock()
     sounds = {'step': tone(600, 20), 'steps': tone(330, 150), 'turn': tone(900, 10),
               'bump': tone(120, 60), 'win': tone(1320, 400), 'new': tone(660, 50),
-              'menu': tone(800, 15), 'take': tone(1000, 60), 'drop': tone(500, 60)}
+              'menu': tone(800, 15), 'take': tone(1000, 60), 'drop': tone(500, 60),
+              'locked': tone(150, 80), 'unlock': tone(1200, 120)}
     game = game or Cave(load_maze(maze))
     menu = Menu()
     running, dirty = True, True
