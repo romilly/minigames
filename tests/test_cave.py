@@ -276,3 +276,171 @@ def test_the_view_shows_steps_ahead_and_underfoot():
     assert game.steps_in_view() == [(2, '>')]
     game.act('forward'), game.act('forward')
     assert game.steps_in_view() == [(0, '<')]
+
+
+# ---- Objects and treasure ----
+
+TREASURE = dict(SPEC, objects={
+    'nugget': {'name': 'gold nugget', 'description': 'It gleams.', 'at': 'A', 'value': 10},
+    'ring': {'name': 'silver ring', 'at': [2, 1], 'value': 5},
+    'rope': {'name': 'rope', 'at': 'A'},
+})
+
+
+def test_objects_start_where_the_maze_puts_them():
+    game = Cave(Maze(TREASURE))
+    assert game.objects_here() == ['nugget', 'rope']        # sorted by id
+    game.act('left')                                          # face east
+    game.act('forward')
+    assert game.objects_here() == ['ring']
+
+
+def test_an_object_somewhere_not_on_the_map_is_an_error():
+    spec = dict(SPEC, objects={'x': {'name': 'x', 'at': 'Q'}})
+    with pytest.raises(ValueError, match='Q'):
+        Maze(spec)
+
+
+def test_take_and_drop():
+    game = Cave(Maze(TREASURE))
+    assert game.do(('take', 'nugget')) == ['take']
+    assert game.carried() == ['nugget'] and game.objects_here() == ['rope']
+    assert game.message == 'Taken: gold nugget.'
+    game.act('forward')
+    assert game.message is None                               # moving clears it
+    assert game.do(('drop', 'nugget')) == ['drop']
+    assert game.carried() == [] and game.objects_here() == ['nugget']
+
+
+def test_you_cannot_take_what_is_not_here():
+    game = Cave(Maze(TREASURE))
+    assert game.do(('take', 'ring')) == []
+    assert game.carried() == []
+
+
+def test_the_menu_offers_what_you_can_do_here():
+    game = Cave(Maze(TREASURE))
+    game.do(('take', 'rope'))
+    assert game.menu_items() == [('Take gold nugget', ('take', 'nugget')),
+                                 ('Drop rope', ('drop', 'rope')),
+                                 ('Inventory', ('inventory',))]
+
+
+def test_inventory_lists_what_you_carry_and_its_value():
+    game = Cave(Maze(TREASURE))
+    game.do(('inventory',))
+    assert game.message == 'You are carrying nothing.'
+    game.do(('take', 'nugget')), game.do(('take', 'rope'))
+    game.do(('inventory',))
+    assert game.message == 'You are carrying: gold nugget, rope. Treasure: 10.'
+
+
+def test_escaping_counts_the_treasure_you_carry():
+    game = Cave(Maze(TREASURE))
+    game.do(('take', 'nugget'))
+    for action in ('forward', 'forward', 'left', 'forward', 'forward'):
+        game.act(action)
+    assert game.won
+    assert 'You escaped with 10 of 15 points of treasure.' in game.description()
+
+
+def test_starting_again_puts_everything_back():
+    game = Cave(Maze(TREASURE))
+    game.do(('take', 'nugget'))
+    game.restart()
+    assert game.carried() == [] and game.objects_here() == ['nugget', 'rope']
+
+
+def test_the_view_shows_objects_ahead():
+    game = Cave(Maze(dict(TREASURE, start={'at': 'A', 'facing': 'east'})))
+    assert game.objects_in_view() == [0, 1]                   # underfoot and one ahead
+    game.do(('take', 'nugget')), game.do(('take', 'rope'))
+    assert game.objects_in_view() == [1]
+
+
+def test_objects_can_be_on_another_level():
+    spec = dict(TWO_LEVELS, objects={'gem': {'name': 'gem', 'at': 'B', 'value': 25}})
+    assert Cave(Maze(spec)).objects_here() == []
+    assert Cave(Maze(dict(spec, start={'at': 'B'}))).objects_here() == ['gem']
+
+
+def test_actions_do_nothing_once_you_have_won():
+    game = Cave(Maze(dict(TREASURE, start={'at': 'B'})))
+    game.won = True
+    assert game.do(('inventory',)) == []
+
+
+# ---- The menu, by touch and by pad ----
+
+import pygame as _pygame
+
+
+class Ev:
+    def __init__(self, type, key=None, pos=None):
+        self.type, self.key, self.pos = type, key, pos
+
+
+def tap(pos):
+    return Ev(_pygame.MOUSEBUTTONDOWN, pos=pos)
+
+
+def press(key):
+    return Ev(_pygame.KEYDOWN, key=key)
+
+
+def menu_setup():
+    game = Cave(Maze(TREASURE))
+    return game, cave.Menu(), cave.Layout(240, 240, 22)
+
+
+def test_tapping_the_menu_button_opens_the_menu():
+    game, menu, layout = menu_setup()
+    assert cave.handle(tap((5, 5)), game, menu, layout) == ['menu']
+    assert menu.is_open and menu.items == game.menu_items()
+
+
+def test_tapping_an_item_does_it_and_closes_the_menu():
+    game, menu, layout = menu_setup()
+    cave.handle(tap((5, 5)), game, menu, layout)
+    x, y, w, h = layout.menu_item_rect(0)
+    assert cave.handle(tap((x + 5, y + 5)), game, menu, layout) == ['take']
+    assert game.carried() == ['nugget'] and not menu.is_open
+
+
+def test_tapping_away_from_the_items_just_closes_the_menu():
+    game, menu, layout = menu_setup()
+    cave.handle(tap((5, 5)), game, menu, layout)
+    assert cave.handle(tap((120, 230)), game, menu, layout) == []
+    assert not menu.is_open and game.position == (1, 1)
+
+
+def test_the_pad_opens_moves_through_and_chooses():
+    game, menu, layout = menu_setup()
+    cave.handle(press(_pygame.K_a), game, menu, layout)
+    assert menu.is_open
+    cave.handle(press(_pygame.K_DOWN), game, menu, layout)
+    assert cave.handle(press(_pygame.K_a), game, menu, layout) == ['take']
+    assert game.carried() == ['rope']
+
+
+def test_b_closes_the_menu_and_arrows_move_again_once_it_is_shut():
+    game, menu, layout = menu_setup()
+    cave.handle(press(_pygame.K_a), game, menu, layout)
+    cave.handle(press(_pygame.K_b), game, menu, layout)
+    assert not menu.is_open
+    assert cave.handle(press(_pygame.K_UP), game, menu, layout) == ['step']
+
+
+def test_menu_selection_wraps_round():
+    menu = cave.Menu()
+    menu.show([('a', 1), ('b', 2)])
+    menu.move(-1)
+    assert menu.chosen() == 2
+
+
+def test_only_as_many_items_as_fit_are_offered():
+    layout = cave.Layout(240, 240, 22)
+    assert 4 <= layout.menu_rows <= 6
+    menu = cave.Menu()
+    menu.show([(str(i), i) for i in range(20)], layout.menu_rows)
+    assert len(menu.items) == layout.menu_rows

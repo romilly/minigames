@@ -117,3 +117,17 @@ def test_cave_fits_and_answers_touches(monkeypatch, size):
     texts = [c for c in display.calls if c[0] == 'text']
     assert texts and all(c[5] >= 2 for c in texts)            # big enough to read
     assert all(c[4] + display.text_height(c[5]) <= view_y for c in texts)
+
+
+@pytest.mark.parametrize('size', SIZES)
+def test_cave_menu_fits(monkeypatch, size):
+    from fakes import ScriptedTouch
+    touch = ScriptedTouch(None, (5, 5), None)            # open the menu
+    buttons = ScriptedButtons(*([set()] * 4 + [{mg.K_ESCAPE}]))
+    display = RecordingDisplay(size)
+    pg = fake_pygame(display=display, buttons=buttons, touch=touch)
+    cave = load_on_shim(monkeypatch, 'cave', pg)
+    cave.main()
+    assert ('text', (255, 255, 255), 'Inventory') in [c[:3] for c in display.calls]
+    assert off_screen(display) == []
+    assert polygons_off_screen(display) == []

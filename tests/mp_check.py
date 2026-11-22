@@ -129,3 +129,20 @@ game = cave.Cave(cave.Maze(two))
 assert [game.act(a) for a in ('forward', 'forward', 'around', 'forward', 'forward')] == \
     [['step'], ['steps'], ['turn'], ['step'], ['win']]
 print('MicroPython cave levels check passed')
+
+spec['objects'] = {'gem': {'name': 'gem', 'at': 'A', 'value': 7}}
+game = cave.Cave(cave.Maze(spec))
+menu = cave.Menu()
+layout = cave.Layout(240, 240, 22)
+
+
+class Ev:
+    def __init__(self, type, key=None, pos=None):
+        self.type, self.key, self.pos = type, key, pos
+
+
+assert cave.handle(Ev(mg.MOUSEBUTTONDOWN, pos=(5, 5)), game, menu, layout) == ['menu']
+x, y, w, h = layout.menu_item_rect(0)
+assert cave.handle(Ev(mg.MOUSEBUTTONDOWN, pos=(x + 5, y + 5)), game, menu, layout) == ['take']
+assert game.carried() == ['gem'] and game.treasure() == 7
+print('MicroPython cave treasure check passed')

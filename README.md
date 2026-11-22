@@ -13,8 +13,10 @@ unchanged on a desktop under real pygame.
 - `cave.py`: find your way through a maze. The top half is a map of what
   you've seen, with the name and description of where you are; the bottom
   half is the view ahead. Touch the left or right third of the view to turn,
-  the middle to step forward (pad: L/R turn, U forward, D turn round). Made for
-  the Presto's touchscreen; mazes are YAML files in `mazes/`.
+  the middle to step forward (pad: L/R turn, U forward, D turn round). The
+  button at the left of the toolbar (pad: A) opens a menu to take and drop
+  things and see what you're carrying; escape with as much treasure as you
+  can. Made for the Presto's touchscreen; mazes are YAML files in `mazes/`.
 
 ## Making a maze
 Copy `mazes/mine.yaml` and draw your own maps: `#` is rock, anything else is
@@ -23,7 +25,9 @@ steps down and `<` steps up; steps down need steps up at the same place on the
 level below, and walking onto either takes you there. Letters mark places with
 a `name` and `description` under `rooms` (each letter once, on any level); a
 room with `goal: true` ends the game. `start` gives a letter (or `[x, y]`, or
-`[x, y, level]` counting levels from 1) and a direction to face. To play a different maze, change `MAZE` at the top of
+`[x, y, level]` counting levels from 1) and a direction to face. `objects`
+have a `name`, a `description`, where they lie (`at`, given the same way as
+`start`), and, for treasure, a `value`. To play a different maze, change `MAZE` at the top of
 `cave.py`, or call `cave.main(maze='yours')`.
 
 `-` on the pad (Esc on the desktop) quits.

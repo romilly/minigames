@@ -3,7 +3,8 @@
 # same place on the level below. Letters mark places that have a name and a
 # description under `rooms` (each letter once, on any level). A room with
 # `goal: true` ends the game when you reach it. A maze with only one level can
-# give its `map` without `levels`.
+# give its `map` without `levels`. Objects lie `at` a letter (or [x, y] or
+# [x, y, level]); ones with a `value` are treasure.
 title: The Old Mine
 start: {at: A, facing: east}
 passage: A narrow passage, cut through the rock.
@@ -43,3 +44,22 @@ rooms:
     name: The way out
     description: A glimmer of daylight! You have found the way out.
     goal: true
+objects:
+  coins:
+    name: silver coins
+    description: A handful of old silver coins.
+    at: B
+    value: 5
+  nugget:
+    name: gold nugget
+    description: A nugget of gold the size of your thumb.
+    at: C
+    value: 10
+  pearl:
+    name: black pearl
+    description: A perfect black pearl, from the bottom of the pool.
+    at: D
+    value: 25
+  pick:
+    name: rusty pick
+    at: C
