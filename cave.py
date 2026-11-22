@@ -383,7 +383,13 @@ def draw(screen, game, layout, font, menu=None):
         draw_menu(screen, menu, layout, font)
 
 
-def main(fps=30, game=None, size=SIZE, maze=MAZE):
+def main(maze_name=MAZE):
+    """Play a maze from mazes/ (or its JSON copy on the board). What run.sh calls."""
+    return play(Cave(load_maze(maze_name)))
+
+
+def play(game, fps=30, size=SIZE):
+    """Run the game until Esc (the pad's '-') or the window closes; return it."""
     pygame.init()
     screen = pygame.display.set_mode(size, getattr(pygame, 'SCALED', 0))
     font = pygame.font.Font(None, 24)     # scale 2 on the board, like the scores
@@ -393,7 +399,6 @@ def main(fps=30, game=None, size=SIZE, maze=MAZE):
               'bump': tone(120, 60), 'win': tone(1320, 400), 'new': tone(660, 50),
               'menu': tone(800, 15), 'take': tone(1000, 60), 'drop': tone(500, 60),
               'locked': tone(150, 80), 'unlock': tone(1200, 120)}
-    game = game or Cave(load_maze(maze))
     menu = Menu()
     running, dirty = True, True
     while running:

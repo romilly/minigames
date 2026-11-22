@@ -29,7 +29,7 @@ room with `goal: true` ends the game. `start` gives a letter (or `[x, y]`, or
 have a `name`, a `description`, where they lie (`at`, given the same way as
 `start`), and, for treasure, a `value`. A room that `needs` an object is a
 locked door: walk into it carrying that object and it opens, and stays open. To play a different maze, change `MAZE` at the top of
-`cave.py`, or call `cave.main(maze='yours')`.
+`cave.py`, or call `cave.main('yours')`.
 
 `-` on the pad (Esc on the desktop) quits.
 

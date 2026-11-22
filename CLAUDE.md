@@ -37,7 +37,9 @@ maze file format.
   (reads a maze spec), `Cave` (state of play: moving, steps, objects, doors),
   and `Kind` (what a cell is, for the map). Tested in `tests/test_cave_core.py`.
 - `cave.py`: adapters around the core: maze loading, `Menu`, `handle()` (one
-  key or touch event), drawing, and `main()`.
+  key or touch event), and drawing. `main(maze_name)` is the composition root:
+  it loads the maze, builds the `Cave` and hands it to `play(game)`, the loop.
+  Tests call `play()` with a game they've built.
 - `mazes/*.yaml`: maze files. `deploy.sh` converts them to JSON for the board.
 - `tests/fakes.py`: fakes for the ports and `fake_pygame()`; `tests/mp_check.py`
   runs the games under MicroPython with fakes.

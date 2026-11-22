@@ -116,7 +116,7 @@ for name in ('cave', 'cave_core', 'tones'):
 import cave
 import cave_core
 maze = cave.load_maze('/tmp/mp_check_maze')
-game = cave.main(game=cave_core.Cave(maze))
+game = cave.play(cave_core.Cave(maze))
 assert game.position == (2, 1) and game.facing == cave_core.SOUTH, (game.position, game.facing)
 assert any(c[0] == 'polygon' for c in display.calls)
 g = mg.PicoGraphicsDisplay(FakeGraphics())

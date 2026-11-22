@@ -133,3 +133,24 @@ def test_cave_menu_fits(monkeypatch, size):
     assert ('text', (255, 255, 255), 'Inventory') in [c[:3] for c in display.calls]
     assert off_screen(display) == []
     assert polygons_off_screen(display) == []
+
+
+def test_cave_plays_the_game_it_is_given(monkeypatch):
+    from fakes import ScriptedTouch
+    from cave_core import Cave, Maze
+    spec = {'start': {'at': 'A', 'facing': 'east'}, 'map': '#####\n#A  #\n#####'}
+    game = Cave(Maze(spec))
+    touch = ScriptedTouch(None, (120, 230), None)            # one step forward
+    buttons = ScriptedButtons(*([set()] * 4 + [{mg.K_ESCAPE}]))
+    pg = fake_pygame(display=RecordingDisplay((240, 240)), buttons=buttons, touch=touch)
+    cave = load_on_shim(monkeypatch, 'cave', pg)
+    assert cave.play(game) is game
+    assert game.position == (2, 1)
+
+
+def test_cave_main_plays_the_named_maze(monkeypatch):
+    buttons = ScriptedButtons(*([set()] * 2 + [{mg.K_ESCAPE}]))
+    pg = fake_pygame(display=RecordingDisplay((240, 240)), buttons=buttons)
+    cave = load_on_shim(monkeypatch, 'cave', pg)
+    game = cave.main('mine')
+    assert game.maze.title == 'The Old Mine'
