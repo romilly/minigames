@@ -11,17 +11,20 @@ The **cave** game now uses Alistair Cockburn's Hexagonal (Ports and Adapters) ar
 - `noughts.py`: noughts and crosses against the computer (minimax with
   alpha-beta pruning, with an occasional deliberate mistake so it can be
   beaten). D-pad moves, A places; A again for a new game.
-- `cave.py`: find your way through a maze. The top half is a map of what
-  you've seen, with the name and description of where you are; the bottom
-  half is the view ahead. Touch the left or right third of the view to turn,
-  the middle to step forward (pad: L/R turn, U forward, D turn round). The
+- `cave.py`: find your way through a maze. A toolbar names where you are;
+  below it are a map of what you've seen, a description, and a strip at the
+  bottom with the view ahead. Touch the view to step forward and the arrows
+  either side of it to turn (pad: L/R turn, U forward, D turn round). The
   button at the left of the toolbar (pad: A) opens a menu to take and drop
-  things and see what you're carrying; escape with as much treasure as you
-  can. Made for the Presto's touchscreen; mazes are YAML files in `mazes/`.
+  things and see what you're carrying; find the key, and escape with as much
+  treasure as you can. Made for the Presto's touchscreen; mazes are YAML
+  files in `mazes/`. [Play it in your browser](https://romilly.github.io/minigames/browser/).
 
 ## Playing cave in a browser
 The same game runs in a web page, using Pyodide (Python compiled to
-WebAssembly). From the repository root:
+WebAssembly): **[play it here](https://romilly.github.io/minigames/browser/)**.
+The same core runs on the boards, the desktop and the page; only the
+adapters differ (see `browser/`). To run it locally, from the repository root:
 
     python -m http.server
 
