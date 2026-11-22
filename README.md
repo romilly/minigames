@@ -1,8 +1,9 @@
 # minigames
 
 Games for the Pimoroni Explorer and Presto (both RP2350), written against a small subset of
-pygame (`minigame.py`) for MicroPython, with a Qw/ST Pad as the controller. A game written against the subset runs
-unchanged on a desktop under real pygame.
+pygame (`minigame.py`) for MicroPython, with a Qw/ST Pad or touchscreen as the controller. A game written against the subset runs unchanged on a desktop under real pygame.
+
+The **cave** game now uses Alistair Cockburn's Hexagonal (Ports and Adapters) architecture, and *it can be run in a browser*!
 
 ## Games
 - `pong.py`: one paddle against three walls. U/D move; a point per return.
