@@ -111,7 +111,7 @@ display = RecordingDisplay((240, 240))
 touch = ScriptedTouch(None, (120, 180), None, (235, 180), None)
 sys.modules['pygame'] = fake_pygame(display=display, touch=touch,
                                     buttons=ScriptedButtons(*([set()] * 6 + [{mg.K_ESCAPE}])))
-for name in ('cave', 'cave_core', 'tones'):
+for name in ('cave', 'cave_core', 'cave_input', 'cave_layout', 'cave_mazes', 'tones'):
     sys.modules.pop(name, None)
 import cave
 import cave_core
@@ -135,8 +135,10 @@ print('MicroPython cave levels check passed')
 
 spec['objects'] = {'gem': {'name': 'gem', 'at': 'A', 'value': 7}}
 game = cave_core.Cave(cave_core.Maze(spec))
-menu = cave.Menu()
-layout = cave.Layout(240, 240, 22)
+import cave_input
+import cave_layout
+layout = cave_layout.Layout(240, 240, 22)
+controls = cave_input.Controls(game, cave_input.Menu(), layout)
 
 
 class Ev:
@@ -144,9 +146,9 @@ class Ev:
         self.type, self.key, self.pos = type, key, pos
 
 
-assert cave.handle(Ev(mg.MOUSEBUTTONDOWN, pos=(5, 5)), game, menu, layout) == ['menu']
+assert controls.handle(Ev(mg.MOUSEBUTTONDOWN, pos=(5, 5))) == ['menu']
 x, y, w, h = layout.menu_item_rect(0)
-assert cave.handle(Ev(mg.MOUSEBUTTONDOWN, pos=(x + 5, y + 5)), game, menu, layout) == ['take']
+assert controls.handle(Ev(mg.MOUSEBUTTONDOWN, pos=(x + 5, y + 5))) == ['take']
 assert game.carried() == ['gem'] and game.treasure() == 7
 print('MicroPython cave treasure check passed')
 

@@ -17,102 +17,12 @@ import pygame
 from tones import tone
 
 from cave_core import Cave, Kind, STEPS, DOWN, DOOR
+from cave_input import Controls, Menu
+from cave_layout import Layout, DESCRIPTION_LINES
 from cave_mazes import maze_files
 
 MAZE = 'mine'
 
-
-# ---- Controls ----
-
-KEY_ACTIONS = {pygame.K_LEFT: 'left', pygame.K_RIGHT: 'right',
-               pygame.K_UP: 'forward', pygame.K_DOWN: 'around'}
-
-
-def touch_action(pos: tuple[int, int], layout: "Layout") -> str | None:
-    """What a touch at pos means: left of the view turns left, right of it
-    turns right, the view itself steps forward."""
-    x, y = pos
-    if y < layout.view_y:
-        return None
-    if x < layout.view_x:
-        return 'left'
-    if x >= layout.view_x + layout.view_w:
-        return 'right'
-    return 'forward'
-
-
-class Menu:
-    """The toolbar's menu: a list of (label, command) pairs, one selected."""
-
-    def __init__(self) -> None:
-        self.items: list[tuple[str, tuple]] = []      # empty when closed
-        self.selected = 0
-
-    @property
-    def is_open(self) -> bool:
-        return bool(self.items)
-
-    def show(self, items: list[tuple[str, tuple]], rows: int | None = None) -> None:
-        """Open with these items; if there are more than rows, keep the last
-        (Inventory) and as many of the first as fit."""
-        if rows and len(items) > rows:
-            items = items[:rows - 1] + items[-1:]
-        self.items = items
-        self.selected = 0
-
-    def close(self) -> None:
-        self.items = []
-
-    def move(self, step: int) -> None:
-        self.selected = (self.selected + step) % len(self.items)
-
-    def chosen(self) -> tuple:
-        return self.items[self.selected][1]
-
-
-MENU_KEYS = (pygame.K_a, pygame.K_SPACE, pygame.K_RETURN)
-
-
-def handle(event: "pygame.event.Event", game: Cave, menu: Menu, layout: "Layout") -> list[str]:
-    """One key press or touch. Returns what happened, for sounds."""
-    if event.type == pygame.KEYDOWN:
-        key = event.key
-        if game.won:
-            return game.act('forward') if key in KEY_ACTIONS or key in MENU_KEYS else []
-        if menu.is_open:
-            if key in (pygame.K_UP, pygame.K_DOWN):
-                menu.move(-1 if key == pygame.K_UP else 1)
-                return []
-            if key in MENU_KEYS:
-                command = menu.chosen()
-                menu.close()
-                return game.do(command)
-            if key == pygame.K_b:
-                menu.close()
-            return []
-        if key in MENU_KEYS:
-            menu.show(game.menu_items(), layout.menu_rows)
-            return ['menu']
-        if key in KEY_ACTIONS:
-            return game.act(KEY_ACTIONS[key])
-        return []
-    if event.type == pygame.MOUSEBUTTONDOWN:
-        if game.won:
-            return game.act('forward')
-        if menu.is_open:
-            items = menu.items
-            menu.close()
-            index = layout.menu_item_at(event.pos, len(items))
-            return [] if index is None else game.do(items[index][1])
-        if event.pos[1] < layout.toolbar_h:
-            menu.show(game.menu_items(), layout.menu_rows)
-            return ['menu']
-        action = touch_action(event.pos, layout)
-        return game.act(action) if action else []
-    return []
-
-
-# ---- Drawing ----
 
 SIZE = (240, 240)       # the desktop window: the Presto's shape
 BLACK = (0, 0, 0)
@@ -135,55 +45,10 @@ PLAYER = (240, 80, 80)
 CEILING = (20, 20, 30)
 GROUND = (50, 40, 30)
 EDGE = (30, 30, 40)
-# Frames for each depth ahead, as fractions of the view's width and height.
 MAP_COLOURS = {Kind.ROCK: ROCK, Kind.PASSAGE: FLOOR, Kind.ROOM: ROOM, Kind.GOAL: GOAL,
                Kind.DOWN: STAIRS_DOWN, Kind.UP: STAIRS_UP,
                Kind.DOOR: DOOR_COLOUR, Kind.OPEN_DOOR: DOOR_OPEN}
-FRAMES = (0.5, 0.3, 0.175, 0.1, 0.06)
 MAX_CELL = 12
-DESCRIPTION_LINES = 3
-
-
-VIEW_SHARE = 4 / 15     # of the screen's height, for the view ahead
-
-
-class Layout:
-    """From the top: toolbar, map, description, then the view ahead in a
-    strip, twice as wide as it is high, with room either side to turn."""
-
-    def __init__(self, width: int, height: int, line_height: int) -> None:
-        self.width, self.height = width, height
-        self.line_height = line_height
-        self.toolbar_h = line_height + 4
-        self.view_h = int(height * VIEW_SHARE)
-        self.view_y = height - self.view_h
-        self.view_w = 2 * self.view_h
-        self.view_x = (width - self.view_w) // 2
-        self.text_y = self.view_y - DESCRIPTION_LINES * line_height - 2
-        self.map_y = self.toolbar_h + 2
-        self.map_h = self.text_y - self.map_y - 2
-        # The menu covers the map and text, one row per item
-        self.menu_y = self.toolbar_h + 2
-        self.menu_row_h = line_height + 6
-        self.menu_rows = (self.view_y - self.menu_y) // self.menu_row_h
-
-    def menu_item_rect(self, index: int) -> tuple[int, int, int, int]:
-        return (0, self.menu_y + index * self.menu_row_h, self.width, self.menu_row_h)
-
-    def menu_item_at(self, pos: tuple[int, int], count: int) -> int | None:
-        """Which of count menu items pos is on, or None."""
-        index = (pos[1] - self.menu_y) // self.menu_row_h
-        if pos[1] >= self.menu_y and index < count:
-            return index
-        return None
-
-    def frame(self, depth: int) -> tuple[int, int, int, int]:
-        """The rectangle where the walls at a depth meet the next: x0, y0, x1, y1."""
-        f = FRAMES[depth]
-        cx, cy = self.view_x + self.view_w // 2, self.view_y + self.view_h // 2
-        hw, hh = int(f * self.view_w), int(f * self.view_h)
-        return cx - hw, cy - hh, cx + hw, cy + hh
-
 
 def surface(blocked: str | None) -> tuple[int, int, int]:
     """The colour of what blocks the way: rock, or a locked door."""
@@ -389,6 +254,7 @@ def play(game: Cave, fps: int = 30, size: tuple[int, int] = SIZE) -> Cave:
               'menu': tone(800, 15), 'take': tone(1000, 60), 'drop': tone(500, 60),
               'locked': tone(150, 80), 'unlock': tone(1200, 120)}
     menu = Menu()
+    controls = Controls(game, menu, layout)
     running, dirty = True, True
     while running:
         happened = []
@@ -398,7 +264,7 @@ def play(game: Cave, fps: int = 30, size: tuple[int, int] = SIZE) -> Cave:
             elif event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
                 running = False
             elif event.type in (pygame.KEYDOWN, pygame.MOUSEBUTTONDOWN):
-                happened += handle(event, game, menu, layout)
+                happened += controls.handle(event)
                 dirty = True
         for what in happened:
             sounds[what].play()

@@ -61,10 +61,13 @@ maze file format.
 - `cave_mazes.py`: where mazes come from. The `Mazes` port, with `YamlMazes`
   (mazes/*.yaml, the desktop) and `JsonMazes` (the JSON copies on the board);
   `maze_files()` picks the one this machine can read.
-- `cave.py`: adapters around the core: `Menu`, `handle()` (one key or touch
-  event), and drawing. `main(maze_name)` is the composition root: it loads the
-  maze, builds the `Cave` and hands it to `play(game)`, the loop.
-  Tests call `play()` with a game they've built.
+- `cave_layout.py`: `Layout`, where everything goes on the screen; used by
+  drawing and for hit-testing touches. No pygame.
+- `cave_input.py`: the input adapter. `Controls(game, menu, layout).handle(event)`
+  turns keys and touches into moves and commands; `Menu` holds the menu's state.
+- `cave.py`: drawing, and `main(maze_name)`, the composition root: it loads
+  the maze, builds the `Cave`, `Layout`, `Menu` and `Controls`, and runs
+  `play(game)`, the loop. Tests call `play()` with a game they've built.
 - `mazes/*.yaml`: maze files. `deploy.sh` converts them to JSON for the board.
 - `tests/fakes.py`: fakes for the ports and `fake_pygame()`; `tests/mp_check.py`
   runs the games under MicroPython with fakes.
