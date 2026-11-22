@@ -22,6 +22,9 @@ class RecordingDisplay(mg.Display):
     def line(self, color, x1, y1, x2, y2):
         self.calls.append(('line', color, x1, y1, x2, y2))
 
+    def polygon(self, color, points):
+        self.calls.append(('polygon', color, points))
+
     def text(self, color, text, x, y, scale):
         self.calls.append(('text', color, text, x, y, scale))
 
@@ -60,6 +63,18 @@ class ScriptedButtons(mg.Buttons):
         if len(self._frames) > 1:
             return set(self._frames.pop(0))
         return set(self._frames[0])
+
+
+class ScriptedTouch(mg.Touch):
+    """Returns each position (or None for no touch) in turn, then the last forever."""
+
+    def __init__(self, *frames):
+        self._frames = list(frames) or [None]
+
+    def position(self):
+        if len(self._frames) > 1:
+            return self._frames.pop(0)
+        return self._frames[0]
 
 
 class FakeTimer(mg.Timer):
@@ -105,8 +120,8 @@ class FakePad:
         return self.states
 
 
-def fake_pygame(buttons=None, display=None, timer=None, speaker=None):
+def fake_pygame(buttons=None, display=None, timer=None, speaker=None, touch=None):
     return mg.Pygame(display or RecordingDisplay(),
                      buttons or ScriptedButtons(),
                      timer or FakeTimer(),
-                     speaker)
+                     speaker, touch)

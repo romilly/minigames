@@ -4,9 +4,10 @@ Ports (Display, Buttons, Timer) are plain base classes because MicroPython
 has no abc module. Adapters for PicoGraphics and the Qw/ST Pad take the
 hardware objects as arguments, so everything here can be tested on CPython.
 
-Supported: Rect, display.set_mode/flip, Surface.fill/blit, draw.rect/circle/line
-(filled shapes only), font.Font(None, size).render (one bitmap font; size sets
-the scale), event.get (KEYDOWN/KEYUP), key.get_pressed, time.Clock.tick,
+Supported: Rect, display.set_mode/flip, Surface.fill/blit,
+draw.rect/circle/line/polygon (filled shapes only), font.Font(None, size).render
+(one bitmap font; size sets the scale), event.get (KEYDOWN/KEYUP, and
+MOUSEBUTTONDOWN/UP from a touchscreen), key.get_pressed, time.Clock.tick,
 init/quit, and tone(frequency, ms).play(): not pygame, but tones.py gives games
 the same call on the desktop. One note at a time; display.flip() ends notes.
 """
@@ -18,6 +19,8 @@ import time
 QUIT = 256
 KEYDOWN = 768
 KEYUP = 769
+MOUSEBUTTONDOWN = 1025
+MOUSEBUTTONUP = 1026
 
 K_UP = 1
 K_DOWN = 2
@@ -193,6 +196,9 @@ class Display:
     def line(self, color, x1, y1, x2, y2):
         raise NotImplementedError
 
+    def polygon(self, color, points):
+        raise NotImplementedError
+
     def text(self, color, text, x, y, scale):
         raise NotImplementedError
 
@@ -211,6 +217,18 @@ class Buttons:
 
     def pressed(self):
         raise NotImplementedError
+
+
+class Touch:
+    """Where the screen is being touched, as (x, y) in screen pixels, or None."""
+
+    def position(self):
+        raise NotImplementedError
+
+
+class NoTouch(Touch):
+    def position(self):
+        return None
 
 
 class Speaker:
@@ -320,6 +338,11 @@ class PicoGraphicsDisplay(Display):
         self._use(color)
         self._g.line(x1, y1, x2, y2)
 
+    def polygon(self, color, points):
+        self._use(color)
+        # PicoGraphics wants a list of tuples of ints, exactly.
+        self._g.polygon([(int(p[0]), int(p[1])) for p in points])
+
     def text(self, color, text, x, y, scale):
         self._use(color)
         if self._vector_text:
@@ -350,6 +373,20 @@ class QwstPadButtons(Buttons):
     def pressed(self):
         states = self._pad.read_buttons()
         return set(PAD_KEYS[name] for name in PAD_KEYS if states.get(name))
+
+
+class PrestoTouch(Touch):
+    """Adapts the Presto's touch driver (poll(), then state, x, y). Its x and y
+    are already in the display's pixels, doubled-up mode or not."""
+
+    def __init__(self, touch):
+        self._touch = touch
+
+    def position(self):
+        self._touch.poll()
+        if self._touch.state:
+            return (self._touch.x, self._touch.y)
+        return None
 
 
 class ExplorerSpeaker(Speaker):
@@ -431,11 +468,15 @@ class TicksTimer(Timer):
 # ---- The pygame-shaped API ----
 
 class Event:
-    def __init__(self, type, key=None):
+    def __init__(self, type, key=None, pos=None):
         self.type = type
         self.key = key
+        self.pos = pos
+        self.button = 1 if pos is not None else None
 
     def __repr__(self):
+        if self.pos is not None:
+            return 'Event(%d, pos=%r)' % (self.type, self.pos)
         return 'Event(%d, %r)' % (self.type, self.key)
 
 
@@ -617,6 +658,9 @@ class _DrawModule:
         surface._display.line(color, int(start[0]), int(start[1]),
                               int(end[0]), int(end[1]))
 
+    def polygon(self, surface, color, points):
+        surface._display.polygon(color, [(int(p[0]), int(p[1])) for p in points])
+
 
 class _FontModule:
     def __init__(self, display):
@@ -633,9 +677,11 @@ class _FontModule:
 
 
 class _EventModule:
-    def __init__(self, buttons):
+    def __init__(self, buttons, touch=None):
         self._buttons = buttons
+        self._touch = touch or NoTouch()
         self.held = set()
+        self._touched_at = None     # where the current touch last was
 
     def get(self):
         now = self._buttons.pressed()
@@ -646,6 +692,12 @@ class _EventModule:
             elif key in self.held and key not in now:
                 events.append(Event(KEYUP, key))
         self.held = now
+        at = self._touch.position()
+        if at is not None and self._touched_at is None:
+            events.append(Event(MOUSEBUTTONDOWN, pos=at))
+        elif at is None and self._touched_at is not None:
+            events.append(Event(MOUSEBUTTONUP, pos=self._touched_at))
+        self._touched_at = at
         return events
 
     def pump(self):
@@ -674,10 +726,11 @@ class _TimeModule:
 class Pygame:
     """Everything a game reaches through `pygame.`, wired to three ports."""
 
-    def __init__(self, display, buttons, timer, speaker=None):
+    def __init__(self, display, buttons, timer, speaker=None, touch=None):
         self.Rect = Rect
         self.Surface = Surface
-        for name in ('QUIT', 'KEYDOWN', 'KEYUP', 'K_UP', 'K_DOWN', 'K_LEFT',
+        for name in ('QUIT', 'KEYDOWN', 'KEYUP', 'MOUSEBUTTONDOWN',
+                     'MOUSEBUTTONUP', 'K_UP', 'K_DOWN', 'K_LEFT',
                      'K_RIGHT', 'K_a', 'K_b', 'K_x', 'K_y', 'K_RETURN',
                      'K_ESCAPE', 'K_SPACE'):
             setattr(self, name, globals()[name])
@@ -686,7 +739,7 @@ class Pygame:
         self.mixer = _MixerModule(self._sounds)
         self.draw = _DrawModule()
         self.font = _FontModule(display)
-        self.event = _EventModule(buttons)
+        self.event = _EventModule(buttons, touch)
         self.key = _KeyModule(self.event)
         self.time = _TimeModule(timer)
 

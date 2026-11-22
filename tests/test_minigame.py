@@ -3,7 +3,7 @@ import pytest
 
 import minigame as mg
 from fakes import (RecordingDisplay, ScriptedButtons, FakeTimer, FakeGraphics,
-                   FakePad, RecordingSpeaker, fake_pygame)
+                   FakePad, RecordingSpeaker, ScriptedTouch, fake_pygame)
 
 # ---- Rect: the same tests run against real pygame.Rect, as a contract ----
 
@@ -347,3 +347,63 @@ def test_vector_text_size_follows_the_scale():
     d = mg.PicoGraphicsDisplay(FakeGraphics(), vector_text=mg.VectorText(vector))
     d.text((1, 1, 1), 'X', 0, 0, 6)
     assert vector.drawn[-1][3] == 54
+
+
+# ---- Polygons ----
+
+def test_draw_polygon_reaches_the_display():
+    display = RecordingDisplay()
+    pg = fake_pygame(display=display)
+    screen = pg.display.set_mode((0, 0))
+    pg.draw.polygon(screen, (1, 2, 3), [(0, 0), (10.6, 0), (5, 8)])
+    assert display.calls[-1] == ('polygon', (1, 2, 3), [(0, 0), (10, 0), (5, 8)])
+
+
+def test_picographics_polygon_gets_a_list_of_int_tuples():
+    g = FakeGraphics()
+    mg.PicoGraphicsDisplay(g).polygon((1, 2, 3), [[0, 0], (10.6, 0), (5, 8)])
+    assert g.calls[-1] == ('polygon', [(0, 0), (10, 0), (5, 8)])
+
+
+# ---- Touch: pygame's mouse events ----
+
+def test_a_touch_is_a_mouse_button_down_then_up():
+    touch = ScriptedTouch(None, (10, 20), (11, 21), None)
+    pg = fake_pygame(touch=touch)
+    frames = []
+    for _ in range(4):
+        frames.append([(e.type, e.pos) for e in pg.event.get()])
+    assert frames == [[], [(mg.MOUSEBUTTONDOWN, (10, 20))], [],
+                      [(mg.MOUSEBUTTONUP, (11, 21))]]
+
+
+def test_mouse_events_carry_button_one():
+    pg = fake_pygame(touch=ScriptedTouch((1, 2)))
+    event = pg.event.get()[0]
+    assert event.button == 1
+
+
+def test_without_touch_there_are_no_mouse_events():
+    assert fake_pygame().event.get() == []
+
+
+def test_presto_touch_adapter_polls_then_reads():
+    class FakePrestoTouch:
+        def __init__(self):
+            self.polls = 0
+            self.state, self.x, self.y = False, 0, 0
+
+        def poll(self):
+            self.polls += 1
+
+    raw = FakePrestoTouch()
+    touch = mg.PrestoTouch(raw)
+    assert touch.position() is None
+    raw.state, raw.x, raw.y = True, 30, 40
+    assert touch.position() == (30, 40)
+    assert raw.polls == 2
+
+
+def test_pygame_exposes_the_mouse_event_names():
+    pg = fake_pygame()
+    assert (pg.MOUSEBUTTONDOWN, pg.MOUSEBUTTONUP) == (mg.MOUSEBUTTONDOWN, mg.MOUSEBUTTONUP)

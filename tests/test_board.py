@@ -50,9 +50,17 @@ def fake_presto_modules():
     presto.updates = []
     presto.buzzers = []
 
+    class Touch:
+        def __init__(self):
+            self.state, self.x, self.y = False, 0, 0
+
+        def poll(self):
+            pass
+
     class Presto:
         def __init__(self):
             self.display = FakeGraphics()
+            self.touch = Touch()
 
         def update(self):
             presto.updates.append(True)
@@ -203,3 +211,20 @@ def test_explorer_keeps_bitmap_text(monkeypatch):
     load_board(monkeypatch, explorer=fake_explorer(), qwstpad=fake_qwstpad(),
                picovector=picovector)
     assert picovector.made == []
+
+
+def test_touching_the_presto_makes_mouse_events(monkeypatch):
+    presto, machine = fake_presto_modules()
+    board = load_board(monkeypatch, explorer=None, presto=presto, machine=machine,
+                       qwstpad=fake_qwstpad())
+    board._presto.touch.state, board._presto.touch.x, board._presto.touch.y = True, 50, 60
+    events = board.event.get()
+    assert [(e.type, e.pos) for e in events] == [(board.MOUSEBUTTONDOWN, (50, 60))]
+    board._presto.touch.state = False
+    assert [(e.type, e.pos) for e in board.event.get()] == [(board.MOUSEBUTTONUP, (50, 60))]
+
+
+def test_the_explorer_has_no_touch(monkeypatch):
+    board = load_board(monkeypatch, explorer=fake_explorer(), qwstpad=fake_qwstpad())
+    assert board.event.get() == []
+    assert board.MOUSEBUTTONDOWN == mg.MOUSEBUTTONDOWN
