@@ -1,5 +1,5 @@
 {
-  "include": ["cave_core.py", "cave.py"],
+  "include": ["cave_core.py", "cave_mazes.py", "cave.py"],
   "pythonVersion": "3.10",
   "typeCheckingMode": "standard",
   "reportMissingModuleSource": false

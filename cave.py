@@ -10,27 +10,16 @@ L and R turn, U steps forward, D turns round; A opens the menu, U and D
 choose, A does it and B closes it. '-' (Esc) quits.
 When you reach the goal, any move starts again.
 
-Mazes live in mazes/<name>.yaml (see mazes/mine.yaml). MicroPython has no
-YAML parser, so scripts/deploy.sh copies them to the board as <name>.json.
+Mazes live in mazes/<name>.yaml (see mazes/mine.yaml); cave_mazes.py loads
+them, or the JSON copies deploy.sh puts on the board.
 """
 import pygame
 from tones import tone
 
-from cave_core import Maze, Cave, Kind, STEPS, DOWN, DOOR
+from cave_core import Cave, Kind, STEPS, DOWN, DOOR
+from cave_mazes import maze_files
 
 MAZE = 'mine'
-
-
-def load_maze(name: str, folder: str = 'mazes') -> Maze:
-    """mazes/<name>.yaml on the desktop; <name>.json on the board."""
-    try:
-        import yaml
-    except ImportError:
-        import json
-        with open(name + '.json') as f:
-            return Maze(json.load(f))
-    with open('%s/%s.yaml' % (folder, name)) as f:
-        return Maze(yaml.safe_load(f))
 
 
 # ---- Controls ----
@@ -385,7 +374,7 @@ def draw(screen: "pygame.Surface", game: Cave, layout: Layout, font: "pygame.fon
 
 def main(maze_name: str = MAZE) -> Cave:
     """Play a maze from mazes/ (or its JSON copy on the board). What run.sh calls."""
-    return play(Cave(load_maze(maze_name)))
+    return play(Cave(maze_files().load(maze_name)))
 
 
 def play(game: Cave, fps: int = 30, size: tuple[int, int] = SIZE) -> Cave:

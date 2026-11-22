@@ -58,9 +58,12 @@ maze file format.
 - `cave_core.py`: the cave game's core, with no pygame and no files: `Maze`
   (reads a maze spec), `Cave` (state of play: moving, steps, objects, doors),
   and `Kind` (what a cell is, for the map). Tested in `tests/test_cave_core.py`.
-- `cave.py`: adapters around the core: maze loading, `Menu`, `handle()` (one
-  key or touch event), and drawing. `main(maze_name)` is the composition root:
-  it loads the maze, builds the `Cave` and hands it to `play(game)`, the loop.
+- `cave_mazes.py`: where mazes come from. The `Mazes` port, with `YamlMazes`
+  (mazes/*.yaml, the desktop) and `JsonMazes` (the JSON copies on the board);
+  `maze_files()` picks the one this machine can read.
+- `cave.py`: adapters around the core: `Menu`, `handle()` (one key or touch
+  event), and drawing. `main(maze_name)` is the composition root: it loads the
+  maze, builds the `Cave` and hands it to `play(game)`, the loop.
   Tests call `play()` with a game they've built.
 - `mazes/*.yaml`: maze files. `deploy.sh` converts them to JSON for the board.
 - `tests/fakes.py`: fakes for the ports and `fake_pygame()`; `tests/mp_check.py`
@@ -73,8 +76,8 @@ These pass desktop tests but fail on the board:
 - No `str.ljust` (or `rjust`/`center`): pad by hand.
 - No `abc` module: ports are plain classes raising `NotImplementedError`.
 - PicoGraphics `polygon` wants a list of tuples of ints, exactly.
-- No YAML parser: mazes reach the board as JSON. `cave.load_maze` reads YAML
-  if `yaml` imports, JSON otherwise.
+- No YAML parser: mazes reach the board as JSON. `cave_mazes.maze_files()`
+  reads YAML if `yaml` imports, JSON otherwise.
 - Keep `import pygame` at module level in games: on the board it's the shim.
 - Event and key constants differ from pygame's: use the names, never values.
 - Type hints are fine (MicroPython ignores annotations), but: never import

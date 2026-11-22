@@ -115,7 +115,9 @@ for name in ('cave', 'cave_core', 'tones'):
     sys.modules.pop(name, None)
 import cave
 import cave_core
-maze = cave.load_maze('/tmp/mp_check_maze')
+import cave_mazes
+assert isinstance(cave_mazes.maze_files(), cave_mazes.JsonMazes)   # no yaml here
+maze = cave_mazes.JsonMazes('/tmp').load('mp_check_maze')
 game = cave.play(cave_core.Cave(maze))
 assert game.position == (2, 1) and game.facing == cave_core.SOUTH, (game.position, game.facing)
 assert any(c[0] == 'polygon' for c in display.calls)
