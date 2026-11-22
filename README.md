@@ -34,6 +34,7 @@ With the board plugged in by USB and
 
     scripts/deploy.sh          # copy everything to the board
     scripts/deploy.sh pong     # copy everything, then run pong.py
+    scripts/run.sh pong        # run the copy that's on the board
 
 The script copies `minigame.py` and the games to `/`, `board/pygame.py` to
 `/pygame.py`, the mazes to `/` as JSON (MicroPython has no YAML parser; the

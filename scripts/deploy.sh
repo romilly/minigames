@@ -34,5 +34,5 @@ PY
 "${mpremote[@]}" cp "$mazes"/*.json :
 
 if [[ $# -gt 0 ]]; then
-    "${mpremote[@]}" run "$1.py"
+    scripts/run.sh "$1"
 fi
