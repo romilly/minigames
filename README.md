@@ -17,10 +17,13 @@ unchanged on a desktop under real pygame.
   the Presto's touchscreen; mazes are YAML files in `mazes/`.
 
 ## Making a maze
-Copy `mazes/mine.yaml` and draw your own `map`: `#` is rock, anything else is
-open. Letters mark places with a `name` and `description` under `rooms`; a
-room with `goal: true` ends the game. `start` gives a letter (or `[x, y]`) and
-a direction to face. To play a different maze, change `MAZE` at the top of
+Copy `mazes/mine.yaml` and draw your own maps: `#` is rock, anything else is
+open. A maze can have several `levels`, top first, or just one `map`. `>` is
+steps down and `<` steps up; steps down need steps up at the same place on the
+level below, and walking onto either takes you there. Letters mark places with
+a `name` and `description` under `rooms` (each letter once, on any level); a
+room with `goal: true` ends the game. `start` gives a letter (or `[x, y]`, or
+`[x, y, level]` counting levels from 1) and a direction to face. To play a different maze, change `MAZE` at the top of
 `cave.py`, or call `cave.main(maze='yours')`.
 
 `-` on the pad (Esc on the desktop) quits.

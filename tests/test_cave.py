@@ -135,7 +135,7 @@ def test_the_sample_mazes_load_from_yaml_and_from_json():
         with open(path) as f:
             spec = yaml.safe_load(f)
         a, b = Maze(spec), Maze(json.loads(json.dumps(spec)))
-        assert (a.rows, a.start, a.rooms) == (b.rows, b.start, b.rooms)
+        assert (a.levels, a.start, a.start_level, a.rooms) == (b.levels, b.start, b.start_level, b.rooms)
         assert any(room.get('goal') for room in a.rooms.values()), path
 
 
@@ -173,3 +173,106 @@ def test_wrap_breaks_between_words():
 
 def test_wrap_keeps_a_word_too_long_for_a_line():
     assert cave.wrap(SixPixelFont(), 'abcdefghijklmnop x', 30) == ['abcdefghijklmnop', 'x']
+
+
+# ---- Steps between levels ----
+
+TWO_LEVELS = {
+    'start': {'at': 'A', 'facing': 'east'},
+    'levels': [
+        {'map': '#####\n'
+                '#A >#\n'
+                '#####\n'},
+        {'map': '#####\n'
+                '#B <#\n'
+                '#####\n'},
+    ],
+    'rooms': {'A': {'name': 'Top'}, 'B': {'name': 'Bottom', 'goal': True}},
+}
+
+
+def test_a_maze_can_have_levels():
+    maze = Maze(TWO_LEVELS)
+    assert len(maze.levels) == 2
+    assert maze.is_wall(1, 1, 0) is False and maze.room(1, 1, 1)['name'] == 'Bottom'
+
+
+def test_rooms_and_the_start_can_be_on_any_level():
+    maze = Maze(dict(TWO_LEVELS, start={'at': 'B', 'facing': 'east'}))
+    assert (maze.start, maze.start_level) == ((1, 1), 1)
+    maze = Maze(dict(TWO_LEVELS, start={'at': [2, 1, 2]}))   # levels count from 1
+    assert (maze.start, maze.start_level) == ((2, 1), 1)
+
+
+def test_stepping_onto_steps_down_takes_you_to_the_level_below():
+    game = Cave(Maze(TWO_LEVELS))
+    assert game.act('forward') == ['step']
+    assert game.act('forward') == ['steps']
+    assert (game.level, game.position, game.facing) == (1, (3, 1), EAST)
+    assert game.description() == cave.STEPS_UP
+
+
+def test_turning_on_steps_does_not_change_level():
+    game = Cave(Maze(TWO_LEVELS))
+    game.act('forward'), game.act('forward')
+    game.act('around')
+    assert game.level == 1
+
+
+def test_stepping_onto_steps_up_takes_you_back_up():
+    game = Cave(Maze(dict(TWO_LEVELS, start={'at': 'B', 'facing': 'east'})))
+    game.act('forward')
+    assert game.act('forward') == ['steps']
+    assert (game.level, game.position) == (0, (3, 1))
+    assert game.description() == cave.STEPS_DOWN
+
+
+def test_you_can_win_on_another_level():
+    game = Cave(Maze(TWO_LEVELS))
+    for action in ('forward', 'forward', 'around', 'forward'):
+        game.act(action)
+    assert game.act('forward') == ['win']
+    game.act('forward')                                  # start again
+    assert (game.level, game.position) == (0, (1, 1))
+
+
+def test_each_level_remembers_what_you_have_seen():
+    game = Cave(Maze(TWO_LEVELS))
+    game.act('forward'), game.act('forward')             # down the steps
+    game.act('around')
+    assert (1, 1) in game.seen                           # B, on this level
+    game.act('forward'), game.act('around')
+    game.act('forward')                                  # back up the steps
+    assert game.level == 0
+    assert (2, 1) in game.seen and (4, 1) in game.seen   # level 0's, from before
+
+
+def test_steps_down_need_steps_up_at_the_same_place_below():
+    spec = dict(TWO_LEVELS, levels=[TWO_LEVELS['levels'][0],
+                                    {'map': '#####\n#B< #\n#####\n'}])
+    with pytest.raises(ValueError, match='steps'):
+        Maze(spec)
+
+
+def test_steps_down_on_the_bottom_level_are_an_error():
+    with pytest.raises(ValueError, match='steps'):
+        Maze({'map': '#####\n#A >#\n#####\n'})
+
+
+def test_steps_up_on_the_top_level_are_an_error():
+    with pytest.raises(ValueError, match='steps'):
+        Maze({'map': '#####\n#A <#\n#####\n'})
+
+
+def test_levels_are_padded_to_the_same_size():
+    maze = Maze({'levels': [{'map': '#####\n#A >#\n#####'},
+                            {'map': '###\n#  <#\n#   #\n#####'}]})
+    assert (maze.width, maze.height) == (5, 4)
+    assert maze.is_wall(4, 3, 0)
+
+
+def test_the_view_shows_steps_ahead_and_underfoot():
+    game = Cave(Maze(TWO_LEVELS))
+    assert game.steps_in_view() == [(2, '>')]
+    game.act('forward'), game.act('forward')
+    assert game.steps_in_view() == [(0, '<')]

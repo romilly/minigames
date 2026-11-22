@@ -121,3 +121,11 @@ assert any(c[0] == 'polygon' for c in display.calls)
 g = mg.PicoGraphicsDisplay(FakeGraphics())
 g.polygon((1, 2, 3), [(0, 0), (5.5, 0), (3, 4)])
 print('MicroPython cave check passed')
+
+two = {'start': {'at': 'A', 'facing': 'east'},
+       'levels': [{'map': '#####\n#A >#\n#####'}, {'map': '#####\n#B <#\n#####'}],
+       'rooms': {'B': {'goal': True}}}
+game = cave.Cave(cave.Maze(two))
+assert [game.act(a) for a in ('forward', 'forward', 'around', 'forward', 'forward')] == \
+    [['step'], ['steps'], ['turn'], ['step'], ['win']]
+print('MicroPython cave levels check passed')
