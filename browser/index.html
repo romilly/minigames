@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Cave</title>
+<style>
+  body { background: #111; color: #ccc; font-family: Roboto, sans-serif;
+         display: flex; flex-direction: column; align-items: center; margin: 1em; }
+  /* 240 x 240, shown doubled with square pixels, like the Presto */
+  #screen { width: min(480px, 95vw); aspect-ratio: 1; image-rendering: pixelated;
+            touch-action: none; background: #000; }
+  #status { margin: 0.5em; min-height: 1.2em; }
+  p { max-width: 30em; font-size: 0.9em; text-align: center; }
+</style>
+</head>
+<body>
+<canvas id="screen" width="240" height="240"></canvas>
+<div id="status">Loading Python…</div>
+<p>Tap or click the view to step forward and the arrows to turn; the button at
+the top left opens the menu. Keys: arrows to move, A or Enter for the menu,
+B to close it, Esc to start again.</p>
+<script type="module">
+  import { loadPyodide } from 'https://cdn.jsdelivr.net/pyodide/v314.0.8/full/pyodide.mjs';
+
+  // The game's files, from the repository root (this page lives in browser/).
+  // The same files as the board's, plus the browser's adapters and pygame.
+  const ROOT = '..';
+  const FILES = {
+    'minigame.py': 'minigame.py', 'tones.py': 'tones.py',
+    'cave.py': 'cave.py', 'cave_core.py': 'cave_core.py', 'cave_mazes.py': 'cave_mazes.py',
+    'cave_layout.py': 'cave_layout.py', 'cave_input.py': 'cave_input.py',
+    'cave_screen.py': 'cave_screen.py',
+    'minigame_web.py': 'browser/minigame_web.py', 'pygame.py': 'browser/pygame.py',
+    'cave_web.py': 'browser/cave_web.py',
+    'mazes/mine.yaml': 'mazes/mine.yaml',
+  };
+  const status = document.getElementById('status');
+
+  try {
+    const pyodide = await loadPyodide();
+    status.textContent = 'Loading the game…';
+    await pyodide.loadPackage('pyyaml');            // the mazes are YAML
+    pyodide.FS.mkdirTree('mazes');
+    for (const [name, path] of Object.entries(FILES)) {
+      const response = await fetch(`${ROOT}/${path}`);
+      if (!response.ok) throw new Error(`couldn't fetch ${path}: ${response.status}`);
+      pyodide.FS.writeFile(name, await response.text());
+    }
+    status.textContent = '';
+    await pyodide.runPythonAsync('import cave_web\nawait cave_web.run()');
+  } catch (error) {
+    status.textContent = `Something went wrong: ${error.message}`;
+    console.error(error);
+  }
+</script>
+</body>
+</html>

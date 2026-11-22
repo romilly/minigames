@@ -101,14 +101,23 @@ class KeyboardButtons(mg.Buttons):
         self._held: set[int] = set()
         self._unseen: set[int] = set()      # pressed since the last poll
 
+    @staticmethod
+    def _key(name: str) -> int | None:
+        return KEYS.get(name.lower() if len(name) == 1 else name)   # Shift, Caps Lock
+
+    @staticmethod
+    def handles(name: str) -> bool:
+        """Whether the game uses this key, so the page shouldn't (arrows scroll)."""
+        return KeyboardButtons._key(name) is not None
+
     def down(self, name: str) -> None:
-        key = KEYS.get(name)
+        key = self._key(name)
         if key is not None:
             self._held.add(key)
             self._unseen.add(key)
 
     def up(self, name: str) -> None:
-        key = KEYS.get(name)
+        key = self._key(name)
         if key is not None:
             self._held.discard(key)
 

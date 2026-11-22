@@ -3,3 +3,5 @@ __pycache__/
 *.pyc
 
 venv
+browser/check/node_modules/
+browser/check/package-lock.json

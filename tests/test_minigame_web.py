@@ -176,3 +176,16 @@ def test_the_timer_reads_the_clock_and_never_blocks():
     assert timer.now_ms() == 1000
     timer.sleep_ms(500)                     # returns at once
     assert timer.now_ms() == 1000
+
+
+def test_letter_keys_work_with_shift_or_caps_lock():
+    keys = KeyboardButtons()
+    keys.down('A')
+    assert keys.pressed() == {mg.K_a}
+    keys.up('A')
+    assert keys.pressed() == set()
+
+
+def test_the_keys_the_game_uses_are_known_so_the_page_can_claim_them():
+    assert KeyboardButtons.handles('ArrowDown') and KeyboardButtons.handles('B')
+    assert not KeyboardButtons.handles('F5')

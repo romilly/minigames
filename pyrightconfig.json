@@ -1,5 +1,5 @@
 {
-  "include": ["cave_core.py", "cave_mazes.py", "cave_layout.py", "cave_input.py", "cave_screen.py", "cave.py", "browser/minigame_web.py"],
+  "include": ["cave_core.py", "cave_mazes.py", "cave_layout.py", "cave_input.py", "cave_screen.py", "cave.py", "browser/minigame_web.py", "browser/cave_web.py"],
   "pythonVersion": "3.10",
   "typeCheckingMode": "standard",
   "reportMissingModuleSource": false

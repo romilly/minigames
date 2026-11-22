@@ -18,6 +18,17 @@ unchanged on a desktop under real pygame.
   things and see what you're carrying; escape with as much treasure as you
   can. Made for the Presto's touchscreen; mazes are YAML files in `mazes/`.
 
+## Playing cave in a browser
+The same game runs in a web page, using Pyodide (Python compiled to
+WebAssembly). From the repository root:
+
+    python -m http.server
+
+then open http://localhost:8000/browser/. Click or tap the view to step
+forward and the arrows to turn; the button at the top left opens the menu.
+Keys: arrows to move, A or Enter for the menu, B to close it, Esc to start
+again.
+
 ## Making a maze
 Copy `mazes/mine.yaml` and draw your own maps: `#` is rock, anything else is
 open. A maze can have several `levels`, top first, or just one `map`. `>` is

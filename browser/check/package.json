@@ -1,0 +1,10 @@
+{
+  "name": "minigames-browser-check",
+  "private": true,
+  "description": "Runs the browser version in Pyodide under Node, with a real canvas",
+  "type": "module",
+  "dependencies": {
+    "canvas": "^3.0.0",
+    "pyodide": "314.0.8"
+  }
+}

@@ -18,6 +18,11 @@ maze file format.
 - Deploy and run: `scripts/deploy.sh cave` copies everything to the board and
   runs it; `scripts/run.sh cave` runs the board's copy. Set `MPR_DEVICE` if
   more than one board is plugged in.
+- Browser: serve the repo root (`python -m http.server`) and open
+  `/browser/`. `scripts/browser_check.sh` plays the browser version in Pyodide
+  under Node with a real canvas and checks the screen (needs Node; installs
+  Pyodide and node-canvas into `browser/check/` the first time). Run it when
+  you change anything the browser loads.
 - Commit and push straight to main, in small commits that each leave `pytest`,
   pyright and `mp_check.py` passing. Use a branch for large refactors, so main
   stays playable; merge when it has been played on the board. Commit author:
@@ -74,6 +79,13 @@ maze file format.
   pass of the loop (False once the player quits). `play(game)` calls
   `frame()` in a loop on the desktop and the board; the browser calls it
   from an async loop. Tests call `play()` or `frame()` with a game they've built.
+- `browser/`: cave in a web page, via Pyodide. `minigame_web.py` has the
+  browser's adapters for minigame's ports (canvas, keyboard, pointer, Web
+  Audio, a timer that never blocks), tested with stand-ins for the JavaScript
+  objects. `pygame.py` wires them to the page, as `board/pygame.py` does to
+  the board. `cave_web.py` is the browser's composition root: an async loop
+  around `Session.frame()`. `index.html` loads Pyodide and copies the files
+  in; its file list and `check/check_cave.mjs`'s must match.
 - `mazes/*.yaml`: maze files. `deploy.sh` converts them to JSON for the board.
 - `tests/fakes.py`: fakes for the ports and `fake_pygame()`; `tests/mp_check.py`
   runs the games under MicroPython with fakes. `load_on_shim()` in
