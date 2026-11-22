@@ -63,7 +63,8 @@ the bitmap font. To try smooth text on the Explorer too, set
 `python pong.py` with pygame installed. Arrow keys, Esc to quit. Set `SIZE = (240, 240)` at the top of a game to see the Presto's shape.
 
 ## Tests
-`pytest` (needs pygame and PyYAML: the Rect tests run against both implementations).
+`pytest` (needs pygame and PyYAML: the Rect tests run against both implementations;
+`pip install -r requirements-dev.txt` installs those, pytest and mpremote).
 `micropython tests/mp_check.py` checks the core under MicroPython.
 
 ## The subset

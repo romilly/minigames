@@ -1,0 +1,6 @@
+# For running the tests and deploying to the board:
+#   pip install -r requirements-dev.txt
+pytest
+pygame
+pyyaml
+mpremote
