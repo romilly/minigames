@@ -100,8 +100,8 @@ def polygons_off_screen(display):
 def test_cave_fits_and_answers_touches(monkeypatch, size):
     from fakes import ScriptedTouch
     w, h = size
-    middle_of_view = (w // 2, h * 3 // 4)
-    right_of_view = (w - 5, h * 3 // 4)
+    middle_of_view = (w // 2, h - 10)
+    right_of_view = (w - 5, h - 10)
     # forward, release, turn right, release, then Esc
     touch = ScriptedTouch(None, middle_of_view, None, right_of_view, None)
     buttons = ScriptedButtons(*([set()] * 6 + [{mg.K_ESCAPE}]))
@@ -113,3 +113,7 @@ def test_cave_fits_and_answers_touches(monkeypatch, size):
     assert game.facing == cave.SOUTH                 # then a right turn
     assert off_screen(display) == []
     assert polygons_off_screen(display) == []
+    view_y = h - h * 4 // 15
+    texts = [c for c in display.calls if c[0] == 'text']
+    assert texts and all(c[5] >= 2 for c in texts)            # big enough to read
+    assert all(c[4] + display.text_height(c[5]) <= view_y for c in texts)

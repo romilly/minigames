@@ -1,10 +1,9 @@
 """Cave: find your way through a maze, seen in first person.
 
-The top half of the screen is a map of what you've seen so far, with the
-name and description of where you are. The bottom half is the view ahead.
+From the top: a toolbar with the name of where you are, a map of what you've
+seen so far, a description, and a strip at the bottom with the view ahead.
 
-Touch the bottom half: left third turns left, right third turns right, the
-middle steps forward. On the pad (or the desktop's keyboard or mouse):
+Touch the view to step forward, and the arrows either side of it to turn. On the pad (or the desktop's keyboard or mouse):
 L and R turn, U steps forward, D turns round. '-' (Esc) quits.
 When you reach the goal, any move starts again.
 
@@ -173,14 +172,14 @@ KEY_ACTIONS = {pygame.K_LEFT: 'left', pygame.K_RIGHT: 'right',
 
 
 def touch_action(pos, layout):
-    """What a touch at pos means: thirds of the view, left to right."""
+    """What a touch at pos means: left of the view turns left, right of it
+    turns right, the view itself steps forward."""
     x, y = pos
     if y < layout.view_y:
         return None
-    third = layout.width // 3
-    if x < third:
+    if x < layout.view_x:
         return 'left'
-    if x >= layout.width - third:
+    if x >= layout.view_x + layout.view_w:
         return 'right'
     return 'forward'
 
@@ -191,6 +190,8 @@ SIZE = (240, 240)       # the desktop window: the Presto's shape
 BLACK = (0, 0, 0)
 WHITE = (255, 255, 255)
 GREY = (150, 150, 150)
+TOOLBAR = (30, 40, 70)
+ARROW = (110, 110, 140)
 ROCK = (150, 150, 180)
 FLOOR = (50, 100, 50)
 ROOM = (70, 140, 140)
@@ -205,23 +206,30 @@ MAX_CELL = 12
 DESCRIPTION_LINES = 3
 
 
+VIEW_SHARE = 4 / 15     # of the screen's height, for the view ahead
+
+
 class Layout:
-    """Map and text in the top half, the view ahead in the bottom half."""
+    """From the top: toolbar, map, description, then the view ahead in a
+    strip, twice as wide as it is high, with room either side to turn."""
 
     def __init__(self, width, height, line_height):
         self.width, self.height = width, height
         self.line_height = line_height
-        self.view_y = height // 2
-        self.view_h = height - self.view_y
-        self.text_y = self.view_y - (DESCRIPTION_LINES + 1) * line_height - 2
-        self.map_y = 2
+        self.toolbar_h = line_height + 4
+        self.view_h = int(height * VIEW_SHARE)
+        self.view_y = height - self.view_h
+        self.view_w = 2 * self.view_h
+        self.view_x = (width - self.view_w) // 2
+        self.text_y = self.view_y - DESCRIPTION_LINES * line_height - 2
+        self.map_y = self.toolbar_h + 2
         self.map_h = self.text_y - self.map_y - 2
 
     def frame(self, depth):
         """The rectangle where the walls at a depth meet the next: x0, y0, x1, y1."""
         f = FRAMES[depth]
-        cx, cy = self.width // 2, self.view_y + self.view_h // 2
-        hw, hh = int(f * self.width), int(f * self.view_h)
+        cx, cy = self.view_x + self.view_w // 2, self.view_y + self.view_h // 2
+        hw, hh = int(f * self.view_w), int(f * self.view_h)
         return cx - hw, cy - hh, cx + hw, cy + hh
 
 
@@ -237,9 +245,9 @@ def face(screen, colour, points):
 
 
 def draw_view(screen, game, layout):
-    w, top, h = layout.width, layout.view_y, layout.view_h
-    pygame.draw.rect(screen, CEILING, (0, top, w, h // 2))
-    pygame.draw.rect(screen, GROUND, (0, top + h // 2, w, h - h // 2))
+    x, w, top, h = layout.view_x, layout.view_w, layout.view_y, layout.view_h
+    pygame.draw.rect(screen, CEILING, (x, top, w, h // 2))
+    pygame.draw.rect(screen, GROUND, (x, top + h // 2, w, h - h // 2))
     view = game.view()
     last = len(view) - 1
     if not view[last][2]:                        # no wall in sight: darkness
@@ -310,15 +318,32 @@ def wrap(font, text, max_width):
     return lines
 
 
-def draw_text(screen, game, layout, font):
-    x, y = 4, layout.text_y
+def draw_arrows(screen, layout):
+    """Turn arrows in the spaces either side of the view."""
+    side = layout.view_x
+    if side < 12:
+        return
+    cy = layout.view_y + layout.view_h // 2
+    r = min(side, layout.view_h) // 4
+    for cx, d in ((side // 2, -1), (layout.width - side // 2, 1)):
+        pygame.draw.polygon(screen, ARROW, [(cx + d * r, cy), (cx - d * r, cy - r),
+                                            (cx - d * r, cy + r)])
+
+
+def draw_toolbar(screen, game, layout, font):
+    pygame.draw.rect(screen, TOOLBAR, (0, 0, layout.width, layout.toolbar_h))
     if game.won:
-        name, text = 'You made it!', game.description() + ' Touch to play again.'
+        title = 'You made it!'
     else:
-        name, text = game.room_name(), game.description()
-    if name:
-        screen.blit(font.render(name, False, WHITE), (x, y))
-    y += layout.line_height
+        title = game.room_name() or game.maze.title
+    screen.blit(font.render(title, False, WHITE), (4, 2))
+
+
+def draw_text(screen, game, layout, font):
+    text = game.description()
+    if game.won:
+        text += ' Touch to play again.'
+    x, y = 4, layout.text_y
     for line in wrap(font, text, layout.width - 2 * x)[:DESCRIPTION_LINES]:
         screen.blit(font.render(line, False, GREY), (x, y))
         y += layout.line_height
@@ -326,15 +351,17 @@ def draw_text(screen, game, layout, font):
 
 def draw(screen, game, layout, font):
     screen.fill(BLACK)
+    draw_toolbar(screen, game, layout, font)
     draw_map(screen, game, layout)
     draw_text(screen, game, layout, font)
     draw_view(screen, game, layout)
+    draw_arrows(screen, layout)
 
 
 def main(fps=30, game=None, size=SIZE, maze=MAZE):
     pygame.init()
     screen = pygame.display.set_mode(size, getattr(pygame, 'SCALED', 0))
-    font = pygame.font.Font(None, 16)
+    font = pygame.font.Font(None, 24)     # scale 2 on the board, like the scores
     layout = Layout(*screen.get_size(), line_height=font.size('Ag')[1])
     clock = pygame.time.Clock()
     sounds = {'step': tone(600, 20), 'turn': tone(900, 10), 'bump': tone(120, 60),

@@ -139,12 +139,27 @@ def test_the_sample_mazes_load_from_yaml_and_from_json():
         assert any(room.get('goal') for room in a.rooms.values()), path
 
 
-def test_touches_in_the_view_are_left_forward_right_by_thirds():
-    layout = cave.Layout(240, 240, 10)
-    assert cave.touch_action((10, 200), layout) == 'left'
-    assert cave.touch_action((120, 200), layout) == 'forward'
-    assert cave.touch_action((230, 200), layout) == 'right'
-    assert cave.touch_action((120, 50), layout) is None      # on the map
+def test_touches_beside_the_view_turn_and_on_it_step_forward():
+    layout = cave.Layout(240, 240, 22)
+    y = layout.view_y + 5
+    assert cave.touch_action((layout.view_x - 1, y), layout) == 'left'
+    assert cave.touch_action((120, y), layout) == 'forward'
+    assert cave.touch_action((layout.view_x + layout.view_w, y), layout) == 'right'
+    assert cave.touch_action((120, layout.view_y - 1), layout) is None   # above the view
+
+
+@pytest.mark.parametrize('size', [(240, 240), (320, 240)])
+def test_layout_stacks_toolbar_map_text_and_view(size):
+    layout = cave.Layout(size[0], size[1], 22)
+    assert layout.toolbar_h >= 22
+    assert layout.toolbar_h <= layout.map_y
+    assert layout.map_y + layout.map_h <= layout.text_y
+    assert layout.text_y + cave.DESCRIPTION_LINES * 22 <= layout.view_y
+    assert layout.view_y + layout.view_h == size[1]
+    assert layout.view_h < size[1] // 3                        # a strip, not half the screen
+    assert layout.view_w == 2 * layout.view_h                  # the corridor keeps its shape
+    assert layout.view_x * 2 + layout.view_w == size[0]        # centred, room either side
+    assert layout.map_h >= 7 * 10                              # mine.yaml at 10px a cell
 
 
 class SixPixelFont:
