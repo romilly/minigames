@@ -470,3 +470,9 @@ def test_the_map_shows_doors_locked_then_open():
     game.do(('take', 'key'))
     game.act('forward'), game.act('forward')
     assert map_of(game)[(3, 1)] == (Kind.OPEN_DOOR, False)
+
+
+def test_an_object_with_nowhere_to_be_is_an_error():
+    spec = dict(SPEC, objects={'lamp': {'name': 'lamp'}})
+    with pytest.raises(ValueError, match="lamp.*at"):
+        Maze(spec)

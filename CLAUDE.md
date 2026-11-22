@@ -9,6 +9,7 @@ maze file format.
 
 - TDD: write or change a test first, then the code. Keep `pytest` green.
 - Set up: `pip install -r requirements-dev.txt` (pytest, pygame, pyyaml, mpremote).
+- Type-check: `pyright` (pyrightconfig.json lists the files with hints so far).
 - Run the tests: `pytest`. Also run `tests/mp_check.py` under the MicroPython
   unix port (`micropython tests/mp_check.py`) when you change anything that
   runs on the board: it catches what CPython doesn't.
@@ -55,6 +56,15 @@ These pass desktop tests but fail on the board:
   if `yaml` imports, JSON otherwise.
 - Keep `import pygame` at module level in games: on the board it's the shim.
 - Event and key constants differ from pygame's: use the names, never values.
+- Type hints are fine (MicroPython ignores annotations), but: never import
+  `typing` unguarded (`try: from typing import ...` / `except ImportError:`),
+  never use `from __future__ import annotations` (no `__future__` on the board),
+  and use string hints for forward references (`-> "Cave"`), since CPython
+  evaluates annotations when it defines a function. Type aliases are evaluated
+  at import on both, and MicroPython can't subscript `tuple` or `list`, so write
+  `tuple[int, int]` inline in annotations rather than as an alias.
+  Hint pygame types as strings (`screen: "pygame.Surface"`): under the shim
+  in tests, CPython would evaluate them and the shim lacks some names.
 
 ## Maze files
 

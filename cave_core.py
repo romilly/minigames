@@ -38,24 +38,28 @@ class Maze:
     are numbered from 0 here, and from 1 in specs and messages. Steps down (>)
     on one level need steps up (<) at the same place on the level below."""
 
-    def __init__(self, spec):
+    def __init__(self, spec: dict) -> None:
         grids = [level['map'].rstrip('\n').split('\n')
                  for level in (spec.get('levels') or [spec])]
         self.width = max(len(line) for grid in grids for line in grid)
         self.height = max(len(grid) for grid in grids)
         # Pad every level to the same size (str.ljust isn't in MicroPython)
-        self.levels = [[line + ' ' * (self.width - len(line)) for line in grid] +
+        self.levels: list[list[str]] = [[line + ' ' * (self.width - len(line)) for line in grid] +
                        [WALL * self.width] * (self.height - len(grid))
                        for grid in grids]
-        self.title = spec.get('title', 'A maze')
-        self.passage = spec.get('passage', PASSAGE)
-        self.rooms = spec.get('rooms') or {}
+        self.title: str = spec.get('title', 'A maze')
+        self.passage: str = spec.get('passage', PASSAGE)
+        self.rooms: dict[str, dict] = spec.get('rooms') or {}
         for letter in self.rooms:
             self.find(letter)                    # complains if it's not there
         self._check_steps()
-        self.objects = spec.get('objects') or {}
-        self.object_starts = dict((name, self.place(self.objects[name].get('at')))
-                                  for name in self.objects)
+        self.objects: dict[str, dict] = spec.get('objects') or {}
+        self.object_starts: dict[str, tuple[int, int, int]] = {}
+        for name in self.objects:
+            at = self.objects[name].get('at')
+            if at is None:
+                raise ValueError("object %r needs an 'at' to say where it lies" % name)
+            self.object_starts[name] = self.place(at)
         for letter in self.rooms:
             needs = self.rooms[letter].get('needs')
             if needs is not None and needs not in self.objects:
@@ -66,28 +70,28 @@ class Maze:
             x, y, self.start_level = self._first_open_cell()
         else:
             x, y, self.start_level = self.place(start['at'])
-        self.start = (x, y)
+        self.start: tuple[int, int] = (x, y)
         self.start_facing = DIRECTIONS.index(start.get('facing', 'north'))
 
-    def cell(self, x, y, level=0):
+    def cell(self, x: int, y: int, level: int = 0) -> str:
         if 0 <= x < self.width and 0 <= y < self.height:
             return self.levels[level][y][x]
         return WALL
 
-    def is_wall(self, x, y, level=0):
+    def is_wall(self, x: int, y: int, level: int = 0) -> bool:
         return self.cell(x, y, level) == WALL
 
-    def room(self, x, y, level=0):
+    def room(self, x: int, y: int, level: int = 0) -> dict | None:
         """The room at (x, y) as a dict, or None for plain passage or rock."""
         return self.rooms.get(self.cell(x, y, level))
 
-    def place(self, at):
+    def place(self, at: str | list[int]) -> tuple[int, int, int]:
         """(x, y, level) from a spec's `at`: a letter, [x, y] or [x, y, level from 1]."""
         if isinstance(at, str):
             return self.find(at)
         return (at[0], at[1], at[2] - 1 if len(at) > 2 else 0)
 
-    def find(self, letter):
+    def find(self, letter: str) -> tuple[int, int, int]:
         """Where a letter is: (x, y, level)."""
         for level in range(len(self.levels)):
             for y in range(self.height):
@@ -96,7 +100,7 @@ class Maze:
                     return (x, y, level)
         raise ValueError('%r is not on the map' % letter)
 
-    def _check_steps(self):
+    def _check_steps(self) -> None:
         last = len(self.levels) - 1
         for level in range(last + 1):
             for y in range(self.height):
@@ -111,7 +115,7 @@ class Maze:
                             'steps up at (%d, %d) on level %d need steps down (>) at '
                             'the same place on the level above' % (x, y, level + 1))
 
-    def _first_open_cell(self):
+    def _first_open_cell(self) -> tuple[int, int, int]:
         for y in range(self.height):
             for x in range(self.width):
                 if not self.is_wall(x, y):
@@ -122,27 +126,27 @@ class Maze:
 # ---- The game ----
 
 class Cave:
-    def __init__(self, maze):
+    def __init__(self, maze: Maze) -> None:
         self.maze = maze
         self.restart()
 
-    def restart(self):
+    def restart(self) -> None:
         self.position = self.maze.start
         self.level = self.maze.start_level
         self.facing = self.maze.start_facing
-        self._seen = [set() for _ in self.maze.levels]
-        self._where = dict(self.maze.object_starts)   # name -> (x, y, level) or CARRIED
-        self.unlocked = set()                          # letters of doors you've opened
+        self._seen: list[set[tuple[int, int]]] = [set() for _ in self.maze.levels]
+        self._where: dict[str, tuple[int, int, int] | str] = dict(self.maze.object_starts)   # name -> (x, y, level) or CARRIED
+        self.unlocked: set[str] = set()                          # letters of doors you've opened
         self.won = False
-        self.message = None                            # shown instead of the description
+        self.message: str | None = None                            # shown instead of the description
         self._look()
 
     @property
-    def seen(self):
+    def seen(self) -> set[tuple[int, int]]:
         """The cells you've seen on this level."""
         return self._seen[self.level]
 
-    def _blocked(self, cell):
+    def _blocked(self, cell: tuple[int, int]) -> str | None:
         """What stops you going into cell: WALL, DOOR (locked) or None."""
         here = self.maze.cell(cell[0], cell[1], self.level)
         if here == WALL:
@@ -151,14 +155,14 @@ class Cave:
             return DOOR
         return None
 
-    def _needs(self, letter):
+    def _needs(self, letter: str) -> str | None:
         room = self.maze.rooms.get(letter)
         return room.get('needs') if room else None
 
-    def _door_name(self, letter):
+    def _door_name(self, letter: str) -> str:
         return self.maze.rooms[letter].get('name', 'door').lower()
 
-    def act(self, action):
+    def act(self, action: str) -> list[str]:
         """'left', 'right', 'around' or 'forward'. Returns what happened, for sounds."""
         if self.won:
             self.restart()
@@ -201,26 +205,27 @@ class Cave:
 
     # ---- Objects ----
 
-    def objects_here(self):
+    def objects_here(self) -> list[str]:
         return self.objects_at(self.position)
 
-    def carried(self):
+    def carried(self) -> list[str]:
         return sorted(name for name in self._where if self._where[name] == CARRIED)
 
-    def objects_at(self, cell):
+    def objects_at(self, cell: tuple[int, int]) -> list[str]:
         at = (cell[0], cell[1], self.level)
         return sorted(name for name in self._where if self._where[name] == at)
 
-    def name_of(self, thing):
+    def name_of(self, thing: str) -> str:
         return self.maze.objects[thing].get('name', thing)
 
-    def menu_items(self):
+    def menu_items(self) -> list[tuple[str, tuple]]:
         """What you can do here, as (label, command) pairs for do()."""
-        items = [('Take ' + self.name_of(t), ('take', t)) for t in self.objects_here()]
+        items: list[tuple[str, tuple]] = [
+            ('Take ' + self.name_of(t), ('take', t)) for t in self.objects_here()]
         items += [('Drop ' + self.name_of(t), ('drop', t)) for t in self.carried()]
         return items + [('Inventory', ('inventory',))]
 
-    def do(self, command):
+    def do(self, command: tuple) -> list[str]:
         """Carry out a command from menu_items(). Returns what happened, for sounds."""
         if self.won:
             return []
@@ -245,18 +250,18 @@ class Cave:
             return ['menu']
         return []
 
-    def treasure(self):
+    def treasure(self) -> int:
         return sum(self.maze.objects[t].get('value', 0) for t in self.carried())
 
-    def total_treasure(self):
+    def total_treasure(self) -> int:
         return sum(o.get('value', 0) for o in self.maze.objects.values())
 
-    def map_cells(self):
+    def map_cells(self) -> list[tuple[int, int, str, bool]]:
         """The cells you've seen on this level, as (x, y, Kind, anything lying there)."""
         return [(x, y, self._kind_of((x, y)), bool(self.objects_at((x, y))))
                 for (x, y) in sorted(self.seen)]
 
-    def _kind_of(self, cell):
+    def _kind_of(self, cell: tuple[int, int]) -> str:
         here = self.maze.cell(cell[0], cell[1], self.level)
         if here == WALL:
             return Kind.ROCK
@@ -273,28 +278,28 @@ class Cave:
             return Kind.GOAL
         return Kind.ROOM
 
-    def objects_in_view(self):
+    def objects_in_view(self) -> list[int]:
         """Depths ahead (0 is underfoot) where something is lying."""
         return [depth for depth, cell in enumerate(self._cells_ahead())
                 if self.objects_at(cell)]
 
     # ---- Where you are ----
 
-    def here(self):
+    def here(self) -> str:
         return self.maze.cell(self.position[0], self.position[1], self.level)
 
-    def room_name(self):
+    def room_name(self) -> str:
         room = self.maze.rooms.get(self.here())
         return room.get('name', '') if room else ''
 
-    def description(self):
+    def description(self) -> str:
         text = self._place_description()
         if self.won and self.total_treasure():
             text += ' You escaped with %d of %d points of treasure.' % (
                 self.treasure(), self.total_treasure())
         return text
 
-    def _place_description(self):
+    def _place_description(self) -> str:
         here = self.here()
         room = self.maze.rooms.get(here)
         if room and room.get('description'):
@@ -305,7 +310,7 @@ class Cave:
             return STEPS_UP
         return self.maze.passage
 
-    def steps_in_view(self):
+    def steps_in_view(self) -> list[tuple[int, str]]:
         """Steps you can see, as (depth, DOWN or UP); depth 0 is underfoot."""
         found = []
         for depth, (x, y) in enumerate(self._cells_ahead()):
@@ -314,7 +319,7 @@ class Cave:
                 found.append((depth, here))
         return found
 
-    def view(self):
+    def view(self) -> list[tuple[str | None, str | None, str | None]]:
         """What's ahead, nearest first: for each cell up to DEPTH ahead, what's
         on the left, on the right and ahead: WALL, DOOR or None (open).
         Stops at a wall or a locked door."""
@@ -325,21 +330,21 @@ class Cave:
                            self._blocked(self._ahead(cell))))
         return slices
 
-    def _cells_ahead(self):
+    def _cells_ahead(self) -> list[tuple[int, int]]:
         cells = [self.position]
         while len(cells) < DEPTH and not self._blocked(self._ahead(cells[-1])):
             cells.append(self._ahead(cells[-1]))
         return cells
 
-    def _ahead(self, cell):
+    def _ahead(self, cell: tuple[int, int]) -> tuple[int, int]:
         dx, dy = STEPS[self.facing]
         return (cell[0] + dx, cell[1] + dy)
 
-    def _side(self, cell, turn):
+    def _side(self, cell: tuple[int, int], turn: int) -> tuple[int, int]:
         dx, dy = STEPS[(self.facing + turn) % 4]
         return (cell[0] + dx, cell[1] + dy)
 
-    def _look(self):
+    def _look(self) -> None:
         for cell in self._cells_ahead():
             self.seen.add(cell)
             self.seen.add(self._side(cell, -1))

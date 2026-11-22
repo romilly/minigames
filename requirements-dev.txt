@@ -4,3 +4,4 @@ pytest
 pygame
 pyyaml
 mpremote
+pyright
