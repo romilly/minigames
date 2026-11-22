@@ -30,9 +30,15 @@ def off_screen(display):
 
 
 def load_on_shim(monkeypatch, name, pg):
+    """Import a game with pg as its pygame. Every cached module that imported
+    the real pygame (the game's adapters, tones, gamekit) is dropped first, so
+    it's imported again against pg."""
     monkeypatch.setitem(sys.modules, 'pygame', pg)
-    for module in (name, 'tones', 'gamekit'):
-        monkeypatch.delitem(sys.modules, module, raising=False)
+    for module in [n for n, m in sys.modules.items()
+                   if getattr(m, 'pygame', None) is not None
+                   and not n.startswith(('test_', 'pygame', '_pytest', 'pytest'))]:
+        monkeypatch.delitem(sys.modules, module)
+    monkeypatch.delitem(sys.modules, name, raising=False)
     return importlib.import_module(name)
 
 

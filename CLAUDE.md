@@ -65,12 +65,18 @@ maze file format.
   drawing and for hit-testing touches. No pygame.
 - `cave_input.py`: the input adapter. `Controls(game, menu, layout).handle(event)`
   turns keys and touches into moves and commands; `Menu` holds the menu's state.
-- `cave.py`: drawing, and `main(maze_name)`, the composition root: it loads
-  the maze, builds the `Cave`, `Layout`, `Menu` and `Controls`, and runs
-  `play(game)`, the loop. Tests call `play()` with a game they've built.
+- `cave_screen.py`: the drawing adapter. `Screen(surface, font, layout).draw(game,
+  menu)` draws the toolbar, map, description, view ahead, turn arrows and
+  any open menu, asking the core what to show.
+- `cave.py`: the composition root and nothing else. `main(maze_name)` loads
+  the maze and builds the `Cave`; `play(game)` builds the `Layout`, `Menu`,
+  `Controls` and `Screen` and runs the loop. Tests call `play()` with a game
+  they've built.
 - `mazes/*.yaml`: maze files. `deploy.sh` converts them to JSON for the board.
 - `tests/fakes.py`: fakes for the ports and `fake_pygame()`; `tests/mp_check.py`
-  runs the games under MicroPython with fakes.
+  runs the games under MicroPython with fakes. `load_on_shim()` in
+  `tests/test_sizes.py` imports a game against the fake pygame, first dropping
+  every cached module that imported the real one.
 
 ## MicroPython traps
 

@@ -111,7 +111,7 @@ display = RecordingDisplay((240, 240))
 touch = ScriptedTouch(None, (120, 180), None, (235, 180), None)
 sys.modules['pygame'] = fake_pygame(display=display, touch=touch,
                                     buttons=ScriptedButtons(*([set()] * 6 + [{mg.K_ESCAPE}])))
-for name in ('cave', 'cave_core', 'cave_input', 'cave_layout', 'cave_mazes', 'tones'):
+for name in ('cave', 'cave_core', 'cave_input', 'cave_layout', 'cave_mazes', 'cave_screen', 'tones'):
     sys.modules.pop(name, None)
 import cave
 import cave_core
