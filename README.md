@@ -10,6 +10,18 @@ unchanged on a desktop under real pygame.
 - `noughts.py`: noughts and crosses against the computer (minimax with
   alpha-beta pruning, with an occasional deliberate mistake so it can be
   beaten). D-pad moves, A places; A again for a new game.
+- `cave.py`: find your way through a maze. The top half is a map of what
+  you've seen, with the name and description of where you are; the bottom
+  half is the view ahead. Touch the left or right third of the view to turn,
+  the middle to step forward (pad: L/R turn, U forward, D turn round). Made for
+  the Presto's touchscreen; mazes are YAML files in `mazes/`.
+
+## Making a maze
+Copy `mazes/mine.yaml` and draw your own `map`: `#` is rock, anything else is
+open. Letters mark places with a `name` and `description` under `rooms`; a
+room with `goal: true` ends the game. `start` gives a letter (or `[x, y]`) and
+a direction to face. To play a different maze, change `MAZE` at the top of
+`cave.py`, or call `cave.main(maze='yours')`.
 
 `-` on the pad (Esc on the desktop) quits.
 
@@ -21,14 +33,17 @@ With the board plugged in by USB and
     scripts/deploy.sh pong     # copy everything, then run pong.py
 
 The script copies `minigame.py` and the games to `/`, `board/pygame.py` to
-`/pygame.py`, and installs Pimoroni's `qwstpad` into `/lib` if it isn't there.
+`/pygame.py`, the mazes to `/` as JSON (MicroPython has no YAML parser; the
+conversion needs PyYAML on your computer), and installs Pimoroni's `qwstpad`
+into `/lib` if it isn't there.
 Set `MPR_DEVICE` (e.g. `/dev/ttyACM0`) if more than one board is plugged in.
 
 `board/pygame.py` works out which board it's on. The Presto runs in its
 240 x 240 mode (doubled up to fill the screen); the games size themselves from
 `screen.get_size()`. If the pad doesn't answer, it says so and the Explorer's
 own buttons stand in: A up, C down, X left, Z right, B select (like the pad's
-A), Y Enter. The Presto has no spare buttons, so it needs the pad.
+A), Y Enter. The Presto has no spare buttons, so pong and noughts need the pad; cave
+plays by touch.
 
 On the Presto, text is drawn smoothly with PicoVector in Roboto Medium
 (`fonts/`, copied to the board by the deploy script). Without the font it uses
@@ -39,14 +54,15 @@ the bitmap font. To try smooth text on the Explorer too, set
 `python pong.py` with pygame installed. Arrow keys, Esc to quit. Set `SIZE = (240, 240)` at the top of a game to see the Presto's shape.
 
 ## Tests
-`pytest` (needs pygame: the Rect tests run against both implementations).
+`pytest` (needs pygame and PyYAML: the Rect tests run against both implementations).
 `micropython tests/mp_check.py` checks the core under MicroPython.
 
 ## The subset
-Rect; display.set_mode/flip/update; Surface.fill/blit/get_rect; draw.rect/circle/line
-(filled only); font.Font(None, size).render (one bitmap font, size sets the
-scale); event.get (KEYDOWN/KEYUP; pad U D L R A B X Y + - map to
-K_UP K_DOWN K_LEFT K_RIGHT K_a K_b K_x K_y K_RETURN K_ESCAPE); key.get_pressed;
+Rect; display.set_mode/flip/update; Surface.fill/blit/get_rect;
+draw.rect/circle/line/polygon (filled only); font.Font(None, size).render (one
+bitmap font, size sets the scale); event.get (KEYDOWN/KEYUP; pad U D L R A B X
+Y + - map to K_UP K_DOWN K_LEFT K_RIGHT K_a K_b K_x K_y K_RETURN K_ESCAPE;
+the Presto's touchscreen gives MOUSEBUTTONDOWN/UP with event.pos); key.get_pressed;
 time.Clock.tick, time.get_ticks; mixer.stop.
 
 Sound: `from tones import tone`, then `tone(frequency, ms).play()`. On the

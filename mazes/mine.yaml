@@ -1,0 +1,30 @@
+# A maze for cave.py. Draw the map with # for rock; anything else is open.
+# Letters mark places that have a name and a description under `rooms`.
+# A room with `goal: true` ends the game when you reach it.
+title: The Old Mine
+start: {at: A, facing: east}
+passage: A narrow passage, cut through the rock.
+map: |
+  ###########
+  #A  #    B#
+  # # # ### #
+  # #   #   #
+  # ##### # #
+  #   C #  E#
+  ###########
+rooms:
+  A:
+    name: Mine entrance
+    description: >
+      Daylight fades behind you. A cold draught
+      blows from somewhere ahead.
+  B:
+    name: Flooded chamber
+    description: Water drips steadily from the roof.
+  C:
+    name: Old workings
+    description: Rusty tools lie where the miners left them.
+  E:
+    name: The way out
+    description: A glimmer of daylight! You have found the way out.
+    goal: true

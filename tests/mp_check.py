@@ -96,3 +96,28 @@ def missing():
 
 assert isinstance(mg.pad_or(missing, mg.NoButtons(), lambda m: None), mg.NoButtons)
 print('MicroPython Presto-size check passed')
+
+
+# Cave: a maze from JSON (the board has no YAML), drawn with polygons, played by touch
+import json
+from fakes import ScriptedTouch
+spec = {'start': {'at': 'A', 'facing': 'east'},
+        'map': '#####\n#A  #\n# # #\n#  B#\n#####\n',
+        'rooms': {'A': {'name': 'Start', 'description': 'Dark.'},
+                  'B': {'name': 'End', 'goal': True}}}
+with open('/tmp/mp_check_maze.json', 'w') as f:
+    json.dump(spec, f)
+display = RecordingDisplay((240, 240))
+touch = ScriptedTouch(None, (120, 180), None, (235, 180), None)
+sys.modules['pygame'] = fake_pygame(display=display, touch=touch,
+                                    buttons=ScriptedButtons(*([set()] * 6 + [{mg.K_ESCAPE}])))
+for name in ('cave', 'tones'):
+    sys.modules.pop(name, None)
+import cave
+maze = cave.load_maze('/tmp/mp_check_maze')
+game = cave.main(game=cave.Cave(maze))
+assert game.position == (2, 1) and game.facing == cave.SOUTH, (game.position, game.facing)
+assert any(c[0] == 'polygon' for c in display.calls)
+g = mg.PicoGraphicsDisplay(FakeGraphics())
+g.polygon((1, 2, 3), [(0, 0), (5.5, 0), (3, 4)])
+print('MicroPython cave check passed')

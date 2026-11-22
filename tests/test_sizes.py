@@ -88,3 +88,28 @@ def test_render_fitting_picks_the_largest_font_that_fits():
     assert gamekit.render_fitting(fonts, 'abcd', (1, 1, 1), 48).get_width() == 48
     assert gamekit.render_fitting(fonts, 'abcde', (1, 1, 1), 48).get_width() == 30
     assert gamekit.render_fitting(fonts, 'a' * 20, (1, 1, 1), 48).get_width() == 120
+
+
+def polygons_off_screen(display):
+    w, h = display.size()
+    return [c for c in display.calls if c[0] == 'polygon'
+            and any(not (0 <= x <= w and 0 <= y <= h) for x, y in c[2])]
+
+
+@pytest.mark.parametrize('size', SIZES)
+def test_cave_fits_and_answers_touches(monkeypatch, size):
+    from fakes import ScriptedTouch
+    w, h = size
+    middle_of_view = (w // 2, h * 3 // 4)
+    right_of_view = (w - 5, h * 3 // 4)
+    # forward, release, turn right, release, then Esc
+    touch = ScriptedTouch(None, middle_of_view, None, right_of_view, None)
+    buttons = ScriptedButtons(*([set()] * 6 + [{mg.K_ESCAPE}]))
+    display = RecordingDisplay(size)
+    pg = fake_pygame(display=display, buttons=buttons, touch=touch)
+    cave = load_on_shim(monkeypatch, 'cave', pg)
+    game = cave.main()
+    assert game.position == (2, 1)                   # one step east from A
+    assert game.facing == cave.SOUTH                 # then a right turn
+    assert off_screen(display) == []
+    assert polygons_off_screen(display) == []
