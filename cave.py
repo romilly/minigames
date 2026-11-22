@@ -36,37 +36,53 @@ def main(maze_name: str = MAZE) -> Cave:
     return play(Cave(maze_files().load(maze_name)))
 
 
-def play(game: Cave, fps: int = 30, size: tuple[int, int] = SIZE) -> Cave:
-    """Run the game until Esc (the pad's '-') or the window closes; return it."""
-    pygame.init()
-    surface = pygame.display.set_mode(size, getattr(pygame, 'SCALED', 0))
-    font = pygame.font.Font(None, 24)     # scale 2 on the board, like the scores
-    layout = Layout(*surface.get_size(), line_height=font.size('Ag')[1])
-    clock = pygame.time.Clock()
-    sounds = {'step': tone(600, 20), 'steps': tone(330, 150), 'turn': tone(900, 10),
-              'bump': tone(120, 60), 'win': tone(1320, 400), 'new': tone(660, 50),
-              'menu': tone(800, 15), 'take': tone(1000, 60), 'drop': tone(500, 60),
-              'locked': tone(150, 80), 'unlock': tone(1200, 120)}
-    menu = Menu()
-    controls = Controls(game, menu, layout)
-    screen = Screen(surface, font, layout)
-    running, dirty = True, True
-    while running:
+class Session:
+    """A game being played: the adapters around it, and one frame at a time.
+
+    play() calls frame() in a loop on the desktop and the board; the browser
+    calls it from an async loop, so the page stays responsive."""
+
+    def __init__(self, game: Cave, surface: "pygame.Surface", font: "pygame.font.Font") -> None:
+        self.game = game
+        layout = Layout(*surface.get_size(), line_height=font.size('Ag')[1])
+        self.menu = Menu()
+        self.controls = Controls(game, self.menu, layout)
+        self.screen = Screen(surface, font, layout)
+        self.sounds = {'step': tone(600, 20), 'steps': tone(330, 150), 'turn': tone(900, 10),
+                       'bump': tone(120, 60), 'win': tone(1320, 400), 'new': tone(660, 50),
+                       'menu': tone(800, 15), 'take': tone(1000, 60), 'drop': tone(500, 60),
+                       'locked': tone(150, 80), 'unlock': tone(1200, 120)}
+        self.dirty = True                     # the screen needs drawing
+
+    def frame(self) -> bool:
+        """Handle what's happened, play its sounds, redraw if needed.
+        False once the player has quit (Esc, the pad's '-', or closing the window)."""
         happened = []
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
-                running = False
-            elif event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
-                running = False
-            elif event.type in (pygame.KEYDOWN, pygame.MOUSEBUTTONDOWN):
-                happened += controls.handle(event)
-                dirty = True
+                return False
+            if event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
+                return False
+            if event.type in (pygame.KEYDOWN, pygame.MOUSEBUTTONDOWN):
+                happened += self.controls.handle(event)
+                self.dirty = True
         for what in happened:
-            sounds[what].play()
-        if dirty:
-            screen.draw(game, menu)
-            dirty = False
+            self.sounds[what].play()
+        if self.dirty:
+            self.screen.draw(self.game, self.menu)
+            self.dirty = False
         pygame.display.flip()
+        return True
+
+
+def play(game: Cave, fps: int = 30, size: tuple[int, int] = SIZE) -> Cave:
+    """Run the game until the player quits; return it."""
+    pygame.init()
+    surface = pygame.display.set_mode(size, getattr(pygame, 'SCALED', 0))
+    font = pygame.font.Font(None, 24)     # scale 2 on the board, like the scores
+    session = Session(game, surface, font)
+    clock = pygame.time.Clock()
+    while session.frame():
         clock.tick(fps)
     pygame.quit()
     return game

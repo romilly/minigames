@@ -69,9 +69,11 @@ maze file format.
   menu)` draws the toolbar, map, description, view ahead, turn arrows and
   any open menu, asking the core what to show.
 - `cave.py`: the composition root and nothing else. `main(maze_name)` loads
-  the maze and builds the `Cave`; `play(game)` builds the `Layout`, `Menu`,
-  `Controls` and `Screen` and runs the loop. Tests call `play()` with a game
-  they've built.
+  the maze and builds the `Cave`. `Session(game, surface, font)` builds the
+  `Layout`, `Menu`, `Controls`, `Screen` and sounds, and `frame()` runs one
+  pass of the loop (False once the player quits). `play(game)` calls
+  `frame()` in a loop on the desktop and the board; the browser calls it
+  from an async loop. Tests call `play()` or `frame()` with a game they've built.
 - `mazes/*.yaml`: maze files. `deploy.sh` converts them to JSON for the board.
 - `tests/fakes.py`: fakes for the ports and `fake_pygame()`; `tests/mp_check.py`
   runs the games under MicroPython with fakes. `load_on_shim()` in
