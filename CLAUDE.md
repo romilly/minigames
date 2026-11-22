@@ -8,19 +8,40 @@ maze file format.
 ## Working here
 
 - TDD: write or change a test first, then the code. Keep `pytest` green.
-- Set up: `pip install -r requirements-dev.txt` (pytest, pygame, pyyaml, mpremote).
-- Type-check: `pyright` (pyrightconfig.json lists the files with hints so far).
+- Set up: `pip install -r requirements-dev.txt` (pytest, pygame, pyyaml,
+  mpremote, pyright).
+- Type-check: `pyright` (pyrightconfig.json lists the files with hints so far;
+  add a file there once it has hints).
 - Run the tests: `pytest`. Also run `tests/mp_check.py` under the MicroPython
   unix port (`micropython tests/mp_check.py`) when you change anything that
   runs on the board: it catches what CPython doesn't.
 - Deploy and run: `scripts/deploy.sh cave` copies everything to the board and
   runs it; `scripts/run.sh cave` runs the board's copy. Set `MPR_DEVICE` if
   more than one board is plugged in.
-- Commit and push straight to main. Commit author:
+- Commit and push straight to main, in small commits that each leave `pytest`,
+  pyright and `mp_check.py` passing. Use a branch for large refactors, so main
+  stays playable; merge when it has been played on the board. Commit author:
   Romilly Cocking <romilly.cocking@gmail.com>.
-- Prefer simplicity, but use hexagonal architecture and
-  good object-oriented responsibility driven design
 
+## Design and style
+
+- Prefer simplicity, but use hexagonal architecture and good object-oriented,
+  responsibility-driven design.
+- Hexagonal: a game's core (e.g. `cave_core.py`) holds the rules and state and
+  imports neither pygame nor anything that touches files or hardware; a test
+  checks it imports with pygame blocked. Drawing, input and loading are
+  adapters around it. Hardware sits behind ports in `minigame.py`.
+- One composition root per game: `main()` builds the pieces and passes them
+  in. Collaborators are required parameters, never `None` defaults that a
+  function fills in itself; tests build what they need and pass it.
+- Responsibility-driven: ask the object that knows. The core answers questions
+  in its own terms (`Cave.map_cells()` gives a `Kind` per cell, `view()` says
+  what's ahead); adapters turn the answers into pixels and sounds and never
+  dig into the core's data (cells, room dicts) to work things out themselves.
+- Type hints on new and changed code, kept pyright-clean, within the
+  MicroPython rules below.
+- When a refactor shouldn't change behaviour, check it: tests pass and the
+  screens render the same.
 
 ## Layout
 
