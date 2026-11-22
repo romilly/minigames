@@ -111,12 +111,13 @@ display = RecordingDisplay((240, 240))
 touch = ScriptedTouch(None, (120, 180), None, (235, 180), None)
 sys.modules['pygame'] = fake_pygame(display=display, touch=touch,
                                     buttons=ScriptedButtons(*([set()] * 6 + [{mg.K_ESCAPE}])))
-for name in ('cave', 'tones'):
+for name in ('cave', 'cave_core', 'tones'):
     sys.modules.pop(name, None)
 import cave
+import cave_core
 maze = cave.load_maze('/tmp/mp_check_maze')
-game = cave.main(game=cave.Cave(maze))
-assert game.position == (2, 1) and game.facing == cave.SOUTH, (game.position, game.facing)
+game = cave.main(game=cave_core.Cave(maze))
+assert game.position == (2, 1) and game.facing == cave_core.SOUTH, (game.position, game.facing)
 assert any(c[0] == 'polygon' for c in display.calls)
 g = mg.PicoGraphicsDisplay(FakeGraphics())
 g.polygon((1, 2, 3), [(0, 0), (5.5, 0), (3, 4)])
@@ -125,13 +126,13 @@ print('MicroPython cave check passed')
 two = {'start': {'at': 'A', 'facing': 'east'},
        'levels': [{'map': '#####\n#A >#\n#####'}, {'map': '#####\n#B <#\n#####'}],
        'rooms': {'B': {'goal': True}}}
-game = cave.Cave(cave.Maze(two))
+game = cave_core.Cave(cave_core.Maze(two))
 assert [game.act(a) for a in ('forward', 'forward', 'around', 'forward', 'forward')] == \
     [['step'], ['steps'], ['turn'], ['step'], ['win']]
 print('MicroPython cave levels check passed')
 
 spec['objects'] = {'gem': {'name': 'gem', 'at': 'A', 'value': 7}}
-game = cave.Cave(cave.Maze(spec))
+game = cave_core.Cave(cave_core.Maze(spec))
 menu = cave.Menu()
 layout = cave.Layout(240, 240, 22)
 
@@ -150,7 +151,7 @@ print('MicroPython cave treasure check passed')
 door = {'start': {'at': 'A', 'facing': 'east'}, 'map': '#####\n#AFB#\n#####',
         'rooms': {'F': {'name': 'Gate', 'needs': 'key'}, 'B': {'goal': True}},
         'objects': {'key': {'name': 'key', 'at': 'A'}}}
-game = cave.Cave(cave.Maze(door))
+game = cave_core.Cave(cave_core.Maze(door))
 assert game.act('forward') == ['locked'], game.message
 game.do(('take', 'key'))
 assert game.act('forward') == ['unlock'] and game.act('forward') == ['win']

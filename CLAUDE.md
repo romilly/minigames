@@ -33,8 +33,11 @@ maze file format.
   on both the board and the desktop.
 - Games: `pong.py`, `noughts.py`, `cave.py`. Each has `main()` and runs under
   desktop pygame as `python <game>.py`.
-- `cave.py`: `Maze` (reads a maze spec), `Cave` (game state: moving, steps,
-  objects, doors), `Menu`, `handle()` (one key or touch event), and drawing.
+- `cave_core.py`: the cave game's core, with no pygame and no files: `Maze`
+  (reads a maze spec), `Cave` (state of play: moving, steps, objects, doors),
+  and `Kind` (what a cell is, for the map). Tested in `tests/test_cave_core.py`.
+- `cave.py`: adapters around the core: maze loading, `Menu`, `handle()` (one
+  key or touch event), drawing, and `main()`.
 - `mazes/*.yaml`: maze files. `deploy.sh` converts them to JSON for the board.
 - `tests/fakes.py`: fakes for the ports and `fake_pygame()`; `tests/mp_check.py`
   runs the games under MicroPython with fakes.

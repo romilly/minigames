@@ -4,6 +4,8 @@ import sys
 
 import pytest
 
+from cave_core import SOUTH
+
 import minigame as mg
 from fakes import RecordingDisplay, ScriptedButtons, fake_pygame
 
@@ -110,7 +112,7 @@ def test_cave_fits_and_answers_touches(monkeypatch, size):
     cave = load_on_shim(monkeypatch, 'cave', pg)
     game = cave.main()
     assert game.position == (2, 1)                   # one step east from A
-    assert game.facing == cave.SOUTH                 # then a right turn
+    assert game.facing == SOUTH                      # then a right turn
     assert off_screen(display) == []
     assert polygons_off_screen(display) == []
     view_y = h - h * 4 // 15
