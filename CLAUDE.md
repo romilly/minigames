@@ -17,7 +17,9 @@ maze file format.
   more than one board is plugged in.
 - Commit and push straight to main. Commit author:
   Romilly Cocking <romilly.cocking@gmail.com>.
-- Prefer the simplest thing that works.
+- Prefer simplicity, but use hexagonal architecture and
+  good object-oriented responsibility driven design
+
 
 ## Layout
 
