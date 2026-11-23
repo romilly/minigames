@@ -65,7 +65,8 @@ maze file format.
 - Games: `pong.py`, `noughts.py`, `cave.py`. Each has `main()` and runs under
   desktop pygame as `python <game>.py`.
 - `cave_core.py`: the cave game's core, with no pygame and no files: `Maze`
-  (reads a maze spec), `Cave` (state of play: moving, steps, objects, doors),
+  (reads a maze spec), `Cave` (state of play: moving, steps, objects, doors,
+  lamps burning one light a move),
   and `Kind` (what a cell is, for the map). Tested in `tests/test_cave_core.py`.
 - `cave_mazes.py`: where mazes come from. The `Mazes` port, with `YamlMazes`
   (mazes/*.yaml, the desktop) and `JsonMazes` (the JSON copies on the board);

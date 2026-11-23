@@ -13,7 +13,7 @@ The **cave** game now uses Alistair Cockburn's Hexagonal (Ports and Adapters) ar
   beaten). D-pad moves, A places; A again for a new game.
 - `cave.py`: find your way through a maze. A toolbar names where you are;
   below it are a map of what you've seen, a description, and a strip at the
-  bottom with your health and moves on the left and the view ahead on the
+  bottom with your health and light on the left and the view ahead on the
   right. Touch the middle of the view to step forward, its sides to turn and
   its floor to turn round (pad: L/R turn, U forward, D turn round). The
   button at the left of the toolbar (pad: A) opens a menu to take and drop
@@ -31,7 +31,7 @@ adapters differ (see `browser/`). To run it locally, from the repository root:
 
 then open http://localhost:8000/browser/. Click or tap the middle of the
 view to step forward, its left or right side to turn, and the floor along its
-bottom to turn round; faint chevrons mark the turns. Your health and moves
+bottom to turn round; faint chevrons mark the turns. Your health and light
 are shown beside the view. The button at the top left opens the menu.
 Keys: arrows to move, A or Enter for the menu, B to close it, Esc to start
 again.
@@ -45,7 +45,9 @@ a `name` and `description` under `rooms` (each letter once, on any level); a
 room with `goal: true` ends the game. `start` gives a letter (or `[x, y]`, or
 `[x, y, level]` counting levels from 1) and a direction to face. `objects`
 have a `name`, a `description`, where they lie (`at`, given the same way as
-`start`), and, for treasure, a `value`. A room that `needs` an object is a
+`start`), and, for treasure, a `value`. A lamp has `light`: how many moves it
+stays lit while you carry it (the one with least left burns first), shown
+beside the view with your health. A room that `needs` an object is a
 locked door: walk into it carrying that object and it opens, and stays open. To play a different maze, change `MAZE` at the top of
 `cave.py`, or call `cave.main('yours')`.
 

@@ -437,6 +437,7 @@ def test_the_sample_maze_can_be_won_but_only_with_the_key():
     assert goal in reachable(maze, start, {'F'})
     everything = reachable(maze, start, {'F'})
     assert all(maze.object_starts[t] in everything for t in maze.objects)
+    assert maze.object_starts['lamp'] == start              # pick it up as you go in
 
 
 # ---- What the map shows ----
@@ -507,7 +508,79 @@ def test_starting_again_resets_the_moves():
     assert game.moves == 0
 
 
-def test_stats_are_labelled_for_the_screen():
-    game = Cave(Maze(SPEC))
+def lamps(*lights, at='A'):
+    """SPEC with a lamp per light, all lying at A."""
+    objects = dict(('lamp%d' % i, {'name': 'lamp %d' % i, 'at': at, 'light': n})
+                   for i, n in enumerate(lights))
+    return dict(SPEC, objects=objects)
+
+
+def take_all(game):
+    for name in game.objects_here():
+        game.do(('take', name))
+
+
+def test_stats_show_health_and_the_light_you_carry():
+    game = Cave(Maze(lamps(20)))
+    assert game.stats() == [('Health', '10/10'), ('Light', '0')]
+    take_all(game)
+    assert game.stats() == [('Health', '10/10'), ('Light', '20')]
+
+
+def test_a_carried_lamp_burns_one_light_a_move():
+    game = Cave(Maze(lamps(20)))
+    take_all(game)
     game.act('forward')
-    assert game.stats() == [('Health', '10/10'), ('Moves', '1')]
+    game.act('left')
+    game.act('forward')                     # a bump still takes time
+    assert game.light() == 17
+
+
+def test_a_lamp_lying_on_the_floor_does_not_burn():
+    game = Cave(Maze(lamps(20)))
+    game.act('around')
+    take_all(game)
+    assert game.light() == 20
+
+
+def test_taking_or_dropping_a_lamp_is_not_a_move():
+    game = Cave(Maze(lamps(20)))
+    take_all(game)
+    game.do(('drop', 'lamp0'))
+    take_all(game)
+    assert game.light() == 20
+
+
+def test_the_lamp_with_least_light_burns_first():
+    game = Cave(Maze(lamps(5, 2)))
+    take_all(game)
+    for _ in range(3):
+        game.act('left')
+    assert game.light_of('lamp1') == 0 and game.light_of('lamp0') == 4
+    assert game.light() == 4
+
+
+def test_a_lamp_going_out_says_so_and_then_the_light_stays_at_nothing():
+    game = Cave(Maze(lamps(2)))
+    take_all(game)
+    game.act('left')
+    assert game.message is None
+    game.act('left')
+    assert game.message == 'Your lamp 0 goes out.'
+    game.act('left')
+    assert game.light() == 0 and game.message is None
+
+
+def test_starting_again_refills_the_lamps():
+    game = Cave(Maze(lamps(20)))
+    take_all(game)
+    game.act('left')
+    game.restart()
+    assert game.light_of('lamp0') == 20
+
+
+def test_objects_without_light_are_not_lamps():
+    game = Cave(Maze(dict(SPEC, objects={'rock': {'at': 'A'}})))
+    take_all(game)
+    game.act('left')
+    assert game.light() == 0 and game.light_of('rock') == 0

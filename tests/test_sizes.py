@@ -127,7 +127,7 @@ def test_cave_fits_and_answers_touches(monkeypatch, size):
     assert texts and all(c[5] >= 2 for c in texts)            # big enough to read
     in_stats = [c for c in texts if c[4] >= view_y]
     assert all(c[4] + display.text_height(c[5]) <= view_y for c in texts if c not in in_stats)
-    assert {c[2] for c in in_stats if not c[2][0].isdigit()} == {'Health', 'Moves'}
+    assert {c[2] for c in in_stats if not c[2][0].isdigit()} == {'Health', 'Light'}
     assert all(c[3] + display.text_width(c[2], c[5]) <= w - 2 * view_h for c in in_stats)
     assert all(c[4] + display.text_height(c[5]) <= h for c in in_stats)
 

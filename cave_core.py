@@ -143,6 +143,8 @@ class Cave:
         self.max_health = MAX_HEALTH
         self.health = MAX_HEALTH
         self.moves = 0                                             # every act(), as in Colossal Cave
+        self._light: dict[str, int] = dict(                        # lamp name -> moves of light left
+            (name, int(o['light'])) for name, o in self.maze.objects.items() if 'light' in o)
         self._look()
 
     @property
@@ -173,6 +175,14 @@ class Cave:
             return ['new']
         self.message = None
         self.moves += 1
+        gone_out = self._burn()
+        happened = self._act(action)
+        if gone_out:
+            out = 'Your %s goes out.' % self.name_of(gone_out)
+            self.message = out if not self.message else self.message + ' ' + out
+        return happened
+
+    def _act(self, action: str) -> list[str]:
         if action == 'forward':
             x, y = self._ahead(self.position)
             blocked = self._blocked((x, y))
@@ -211,7 +221,27 @@ class Cave:
     def stats(self) -> list[tuple[str, str]]:
         """How the adventurer is doing, as (label, value) pairs for the screen."""
         return [('Health', '%d/%d' % (self.health, self.max_health)),
-                ('Moves', str(self.moves))]
+                ('Light', str(self.light()))]
+
+    # ---- Lamps ----
+
+    def light_of(self, thing: str) -> int:
+        """Moves of light left in a lamp; 0 for anything that isn't one."""
+        return self._light.get(thing, 0)
+
+    def light(self) -> int:
+        """Moves of light left in the lamps you're carrying."""
+        return sum(self.light_of(t) for t in self.carried())
+
+    def _burn(self) -> str | None:
+        """A move's worth of light from the carried lamp with least left.
+        Returns the lamp's name if that put it out."""
+        lit = [(self._light[t], t) for t in self.carried() if self.light_of(t) > 0]
+        if not lit:
+            return None
+        left, lamp = min(lit)
+        self._light[lamp] = left - 1
+        return lamp if left == 1 else None
 
     # ---- Objects ----
 
