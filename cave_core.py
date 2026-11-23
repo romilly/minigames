@@ -10,6 +10,7 @@ STEPS = ((0, -1), (1, 0), (0, 1), (-1, 0))
 WALL = '#'
 DOWN, UP = '>', '<'        # steps to the level below, and above
 DEPTH = 4                  # how many cells ahead you can see
+MAX_HEALTH = 10
 CARRIED = 'carried'        # where an object you're carrying is
 DOOR = 'door'              # what a locked door looks like in view()
 PASSAGE = 'A dark passage.'
@@ -139,6 +140,9 @@ class Cave:
         self.unlocked: set[str] = set()                          # letters of doors you've opened
         self.won = False
         self.message: str | None = None                            # shown instead of the description
+        self.max_health = MAX_HEALTH
+        self.health = MAX_HEALTH
+        self.moves = 0                                             # every act(), as in Colossal Cave
         self._look()
 
     @property
@@ -168,6 +172,7 @@ class Cave:
             self.restart()
             return ['new']
         self.message = None
+        self.moves += 1
         if action == 'forward':
             x, y = self._ahead(self.position)
             blocked = self._blocked((x, y))
@@ -202,6 +207,11 @@ class Cave:
         self.facing = (self.facing + turns[action]) % 4
         self._look()
         return ['turn']
+
+    def stats(self) -> list[tuple[str, str]]:
+        """How the adventurer is doing, as (label, value) pairs for the screen."""
+        return [('Health', '%d/%d' % (self.health, self.max_health)),
+                ('Moves', str(self.moves))]
 
     # ---- Objects ----
 

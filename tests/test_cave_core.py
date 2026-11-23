@@ -476,3 +476,38 @@ def test_an_object_with_nowhere_to_be_is_an_error():
     spec = dict(SPEC, objects={'lamp': {'name': 'lamp'}})
     with pytest.raises(ValueError, match="lamp.*at"):
         Maze(spec)
+
+
+def test_you_start_with_full_health_and_no_moves():
+    game = Cave(Maze(SPEC))
+    assert (game.health, game.max_health, game.moves) == (10, 10, 0)
+
+
+def test_every_move_counts_even_a_bump():
+    game = Cave(Maze(SPEC))                 # at A, facing south
+    game.act('forward')
+    game.act('left')
+    game.act('forward')                     # bump
+    game.act('around')
+    assert game.moves == 4
+
+
+def test_menu_commands_are_not_moves():
+    game = Cave(Maze(SPEC))
+    game.do(('inventory',))
+    assert game.moves == 0
+
+
+def test_starting_again_resets_the_moves():
+    game = Cave(Maze(SPEC))
+    for action in ('forward', 'forward', 'left', 'forward', 'forward'):
+        game.act(action)
+    assert game.won and game.moves == 5
+    game.act('left')                        # starts again: not a move
+    assert game.moves == 0
+
+
+def test_stats_are_labelled_for_the_screen():
+    game = Cave(Maze(SPEC))
+    game.act('forward')
+    assert game.stats() == [('Health', '10/10'), ('Moves', '1')]
