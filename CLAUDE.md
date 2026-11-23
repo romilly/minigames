@@ -27,6 +27,9 @@ maze file format.
   pyright and `mp_check.py` passing. Use a branch for large refactors, so main
   stays playable; merge when it has been played on the board. Commit author:
   Romilly Cocking <romilly.cocking@gmail.com>.
+- Version: `__version__` in `version.py` (semver, from 0.1.0). Bump the minor
+  number for a new feature and the patch number for a fix, in the commit that
+  finishes it, and tag that commit `v<version>`.
 
 ## Design and style
 
@@ -56,6 +59,7 @@ maze file format.
   Presto's touchscreen. Fully testable on CPython.
 - `board/pygame.py`: deployed to the board as `/pygame.py`. Detects Explorer
   or Presto, wires up the adapters and exposes a `pygame`-like module.
+- `version.py`: `__version__`, for a future about page.
 - `gamekit.py`, `tones.py`: helpers shared by the games; `tone(freq, ms)` works
   on both the board and the desktop.
 - Games: `pong.py`, `noughts.py`, `cave.py`. Each has `main()` and runs under
