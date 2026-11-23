@@ -1,8 +1,9 @@
 """The cave game's screen: the drawing adapter.
 
 From the top: a toolbar with the name of where you are, a map of what you've
-seen so far, a description, and a strip at the bottom with the view ahead,
-with turn arrows either side. An open menu covers the map and description.
+seen so far, a description, and a strip at the bottom with the adventurer's
+stats on the left and the view ahead on the right, marked with faint chevrons
+where a tap turns. An open menu covers the map and description.
 """
 import pygame
 
@@ -14,7 +15,8 @@ BLACK = (0, 0, 0)
 WHITE = (255, 255, 255)
 GREY = (150, 150, 150)
 TOOLBAR = (30, 40, 70)
-ARROW = (110, 110, 140)
+PANEL = (20, 25, 45)
+CHEVRON = (205, 205, 225)
 ROCK = (150, 150, 180)
 FLOOR = (50, 100, 50)
 ROOM = (70, 140, 140)
@@ -62,6 +64,21 @@ def wrap(font: "pygame.font.Font", text: str, max_width: int) -> list[str]:
     return lines
 
 
+def chevron_size(layout: Layout) -> int:
+    return max(3, (layout.floor_y - layout.view_y) // 6)
+
+
+def chevron_tips(layout: Layout) -> tuple[tuple[int, int], tuple[int, int], tuple[int, int]]:
+    """Where the turn-left, turn-right and turn-round chevrons point."""
+    r = chevron_size(layout)
+    cy = (layout.view_y + layout.floor_y) // 2
+    left = (layout.view_x + r // 2 + 2, cy)
+    right = (layout.width - r // 2 - 3, cy)
+    floor_h = layout.view_y + layout.view_h - layout.floor_y
+    middle = (layout.view_x + layout.view_w // 2, layout.floor_y + (floor_h + r) // 2)
+    return left, right, middle
+
+
 class Screen:
     """Draws the game, and the menu when it's open, onto a surface."""
 
@@ -76,8 +93,9 @@ class Screen:
         self._toolbar(game)
         self._map(game)
         self._text(game)
+        self._stats(game)
         self._view(game)
-        self._arrows()
+        self._chevrons()
         if menu.is_open:
             self._menu(menu)
 
@@ -209,17 +227,33 @@ class Screen:
         for i in range(len(points)):
             pygame.draw.line(self.surface, EDGE, points[i], points[(i + 1) % len(points)])
 
-    def _arrows(self) -> None:
-        """Turn arrows in the spaces either side of the view."""
-        layout = self.layout
-        side = layout.view_x
-        if side < 12:
-            return
-        cy = layout.view_y + layout.view_h // 2
-        r = min(side, layout.view_h) // 4
-        for cx, d in ((side // 2, -1), (layout.width - side // 2, 1)):
-            pygame.draw.polygon(self.surface, ARROW, [(cx + d * r, cy), (cx - d * r, cy - r),
-                                                      (cx - d * r, cy + r)])
+    def _stats(self, game: Cave) -> None:
+        """How the adventurer is doing: one label and value a line."""
+        layout, font = self.layout, self.font
+        x, y, w, h = layout.stats_x, layout.stats_y, layout.stats_w, layout.stats_h
+        pygame.draw.rect(self.surface, PANEL, (x, y, w, h))
+        lines = max(1, h // layout.line_height)
+        top = y + (h - min(lines, len(game.stats())) * layout.line_height) // 2
+        for label, value in game.stats()[:lines]:
+            self.surface.blit(font.render(label, False, GREY), (x + 4, top))
+            shown = font.render(value, False, WHITE)
+            self.surface.blit(shown, shown.get_rect(right=x + w - 4, top=top))
+            top += layout.line_height
+
+    def _chevrons(self) -> None:
+        """Faint marks where a tap on the view turns: left, right and round."""
+        (lx, ly), (rx, ry), (fx, fy) = chevron_tips(self.layout)
+        r = chevron_size(self.layout)
+        for dx in (0, 1):                          # two pixels thick
+            self._chevron((lx + dx, ly), (r, -r), (r, r))
+            self._chevron((rx - dx, ry), (-r, -r), (-r, r))
+        for dy in (0, 1):
+            self._chevron((fx, fy - dy), (-r, -r), (r, -r))
+
+    def _chevron(self, tip: tuple[int, int], arm1: tuple[int, int],
+                 arm2: tuple[int, int]) -> None:
+        for ax, ay in (arm1, arm2):
+            pygame.draw.line(self.surface, CHEVRON, tip, (tip[0] + ax, tip[1] + ay))
 
     def _menu(self, menu: Menu) -> None:
         layout, font = self.layout, self.font

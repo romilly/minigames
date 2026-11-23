@@ -12,14 +12,17 @@ KEY_ACTIONS = {pygame.K_LEFT: 'left', pygame.K_RIGHT: 'right',
 
 
 def touch_action(pos: tuple[int, int], layout: Layout) -> str | None:
-    """What a touch at pos means: left of the view turns left, right of it
-    turns right, the view itself steps forward."""
+    """What a touch at pos means: on the view, its floor turns round, its
+    left and right thirds turn and its middle steps forward. Elsewhere, nothing."""
     x, y = pos
-    if y < layout.view_y:
+    if y < layout.view_y or x < layout.view_x:
         return None
-    if x < layout.view_x:
+    if y >= layout.floor_y:
+        return 'around'
+    third = layout.view_w // 3
+    if x < layout.view_x + third:
         return 'left'
-    if x >= layout.view_x + layout.view_w:
+    if x >= layout.view_x + layout.view_w - third:
         return 'right'
     return 'forward'
 

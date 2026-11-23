@@ -46,11 +46,20 @@ def test_an_open_menu_is_drawn_over_the_map_with_its_first_item_chosen():
     assert colour_at(surface, w - 5, y + 2) == cave_screen.MENU_BG
 
 
-def test_the_turn_arrows_sit_either_side_of_the_view():
+def test_the_stats_panel_fills_the_space_left_of_the_view():
     surface = drawn(Cave(Maze(TREASURE)), Menu())
-    cy = LAYOUT.view_y + LAYOUT.view_h // 2
-    assert colour_at(surface, LAYOUT.view_x // 2, cy) == cave_screen.ARROW
-    assert colour_at(surface, LAYOUT.width - LAYOUT.view_x // 2, cy) == cave_screen.ARROW
+    assert colour_at(surface, 1, LAYOUT.view_y + 1) == cave_screen.PANEL
+    assert colour_at(surface, LAYOUT.view_x - 2, LAYOUT.height - 2) == cave_screen.PANEL
+
+
+def test_faint_chevrons_show_where_to_tap_on_the_view():
+    surface = drawn(Cave(Maze(TREASURE)), Menu())
+    (lx, ly), (rx, ry), (fx, fy) = cave_screen.chevron_tips(LAYOUT)
+    assert colour_at(surface, lx, ly) == cave_screen.CHEVRON
+    assert colour_at(surface, rx, ry) == cave_screen.CHEVRON
+    assert colour_at(surface, fx, fy) == cave_screen.CHEVRON
+    assert LAYOUT.view_x <= lx < rx < LAYOUT.width
+    assert ly < LAYOUT.floor_y <= fy < LAYOUT.height
 
 
 class SixPixelFont:

@@ -108,8 +108,9 @@ def polygons_off_screen(display):
 def test_cave_fits_and_answers_touches(monkeypatch, size):
     from fakes import ScriptedTouch
     w, h = size
-    middle_of_view = (w // 2, h - 10)
-    right_of_view = (w - 5, h - 10)
+    view_h = h * 4 // 15
+    middle_of_view = (w - view_h, h - view_h + 5)    # the view is 2 * view_h wide, at the right
+    right_of_view = (w - 5, h - view_h + 5)
     # forward, release, turn right, release, then Esc
     touch = ScriptedTouch(None, middle_of_view, None, right_of_view, None)
     buttons = ScriptedButtons(*([set()] * 6 + [{mg.K_ESCAPE}]))
@@ -124,7 +125,11 @@ def test_cave_fits_and_answers_touches(monkeypatch, size):
     view_y = h - h * 4 // 15
     texts = [c for c in display.calls if c[0] == 'text']
     assert texts and all(c[5] >= 2 for c in texts)            # big enough to read
-    assert all(c[4] + display.text_height(c[5]) <= view_y for c in texts)
+    in_stats = [c for c in texts if c[4] >= view_y]
+    assert all(c[4] + display.text_height(c[5]) <= view_y for c in texts if c not in in_stats)
+    assert {c[2] for c in in_stats if not c[2][0].isdigit()} == {'Health', 'Moves'}
+    assert all(c[3] + display.text_width(c[2], c[5]) <= w - 2 * view_h for c in in_stats)
+    assert all(c[4] + display.text_height(c[5]) <= h for c in in_stats)
 
 
 @pytest.mark.parametrize('size', SIZES)
@@ -146,7 +151,7 @@ def test_cave_plays_the_game_it_is_given(monkeypatch):
     from cave_core import Cave, Maze
     spec = {'start': {'at': 'A', 'facing': 'east'}, 'map': '#####\n#A  #\n#####'}
     game = Cave(Maze(spec))
-    touch = ScriptedTouch(None, (120, 230), None)            # one step forward
+    touch = ScriptedTouch(None, (176, 186), None)            # one step forward
     buttons = ScriptedButtons(*([set()] * 4 + [{mg.K_ESCAPE}]))
     pg = fake_pygame(display=RecordingDisplay((240, 240)), buttons=buttons, touch=touch)
     cave = load_on_shim(monkeypatch, 'cave', pg)

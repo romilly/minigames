@@ -7,11 +7,14 @@ No pygame: just arithmetic on the screen's size and the font's line height.
 FRAMES = (0.5, 0.3, 0.175, 0.1, 0.06)
 DESCRIPTION_LINES = 3
 VIEW_SHARE = 4 / 15     # of the screen's height, for the view ahead
+FLOOR_SHARE = 1 / 3     # of the view's height: tap the floor to turn round
 
 
 class Layout:
-    """From the top: toolbar, map, description, then the view ahead in a
-    strip, twice as wide as it is high, with room either side to turn."""
+    """From the top: toolbar, map, description, then a strip with the
+    adventurer's stats on the left and the view ahead on the right, twice as
+    wide as it is high. Touches on the view move you: its sides turn, its
+    middle steps forward and the strip of floor along its bottom turns round."""
 
     def __init__(self, width: int, height: int, line_height: int) -> None:
         self.width, self.height = width, height
@@ -20,7 +23,10 @@ class Layout:
         self.view_h = int(height * VIEW_SHARE)
         self.view_y = height - self.view_h
         self.view_w = 2 * self.view_h
-        self.view_x = (width - self.view_w) // 2
+        self.view_x = width - self.view_w
+        self.floor_y = self.view_y + self.view_h - int(self.view_h * FLOOR_SHARE)
+        self.stats_x, self.stats_y = 0, self.view_y
+        self.stats_w, self.stats_h = self.view_x, self.view_h
         self.text_y = self.view_y - DESCRIPTION_LINES * line_height - 2
         self.map_y = self.toolbar_h + 2
         self.map_h = self.text_y - self.map_y - 2

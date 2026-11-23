@@ -108,7 +108,7 @@ spec = {'start': {'at': 'A', 'facing': 'east'},
 with open('/tmp/mp_check_maze.json', 'w') as f:
     json.dump(spec, f)
 display = RecordingDisplay((240, 240))
-touch = ScriptedTouch(None, (120, 180), None, (235, 180), None)
+touch = ScriptedTouch(None, (176, 186), None, (235, 186), None)
 sys.modules['pygame'] = fake_pygame(display=display, touch=touch,
                                     buttons=ScriptedButtons(*([set()] * 6 + [{mg.K_ESCAPE}])))
 for name in ('cave', 'cave_core', 'cave_input', 'cave_layout', 'cave_mazes', 'cave_screen', 'tones'):

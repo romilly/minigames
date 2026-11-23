@@ -22,8 +22,16 @@ def test_layout_stacks_toolbar_map_text_and_view(size):
     assert layout.view_y + layout.view_h == size[1]
     assert layout.view_h < size[1] // 3                        # a strip, not half the screen
     assert layout.view_w == 2 * layout.view_h                  # the corridor keeps its shape
-    assert layout.view_x * 2 + layout.view_w == size[0]        # centred, room either side
+    assert layout.view_x + layout.view_w == size[0]            # at the right
+    assert (layout.stats_x, layout.stats_y) == (0, layout.view_y)  # stats to its left
+    assert (layout.stats_w, layout.stats_h) == (layout.view_x, layout.view_h)
+    assert layout.view_y < layout.floor_y < size[1]             # a strip of floor
     assert layout.map_h >= 7 * 10                              # mine.yaml at 10px a cell
+
+
+def test_the_stats_panel_has_room_for_two_lines():
+    layout = Layout(240, 240, 22)
+    assert layout.stats_h >= 2 * 22
 
 
 def test_menu_rows_and_hit_testing():

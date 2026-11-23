@@ -71,8 +71,10 @@ maze file format.
 - `cave_input.py`: the input adapter. `Controls(game, menu, layout).handle(event)`
   turns keys and touches into moves and commands; `Menu` holds the menu's state.
 - `cave_screen.py`: the drawing adapter. `Screen(surface, font, layout).draw(game,
-  menu)` draws the toolbar, map, description, view ahead, turn arrows and
-  any open menu, asking the core what to show.
+  menu)` draws the toolbar, map, description, stats panel (`Cave.stats()`),
+  view ahead with its tap chevrons, and any open menu, asking the core what
+  to show. Touches on the view: sides turn, middle steps, the floor strip
+  along the bottom (`Layout.floor_y`) turns round.
 - `cave.py`: the composition root and nothing else. `main(maze_name)` loads
   the maze and builds the `Cave`. `Session(game, surface, font)` builds the
   `Layout`, `Menu`, `Controls`, `Screen` and sounds, and `frame()` runs one

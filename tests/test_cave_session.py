@@ -18,7 +18,7 @@ def session_on_shim(monkeypatch, buttons=None, touch=None):
 
 
 def test_each_frame_handles_what_happened_since_the_last(monkeypatch):
-    touch = ScriptedTouch(None, (120, 230), None)          # one tap on the view
+    touch = ScriptedTouch(None, (176, 186), None)          # one tap on the view
     session, game, display = session_on_shim(monkeypatch, touch=touch)
     assert session.frame() is True
     assert game.position == (1, 1)

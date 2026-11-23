@@ -26,12 +26,27 @@ def controls():
     return Controls(Cave(Maze(TREASURE)), Menu(), LAYOUT)
 
 
-def test_touches_beside_the_view_turn_and_on_it_step_forward():
-    y = LAYOUT.view_y + 5
-    assert touch_action((LAYOUT.view_x - 1, y), LAYOUT) == 'left'
-    assert touch_action((120, y), LAYOUT) == 'forward'
-    assert touch_action((LAYOUT.view_x + LAYOUT.view_w, y), LAYOUT) == 'right'
-    assert touch_action((120, LAYOUT.view_y - 1), LAYOUT) is None   # above the view
+VIEW_MIDDLE = LAYOUT.view_x + LAYOUT.view_w // 2
+
+
+def test_the_sides_of_the_view_turn_its_middle_steps_and_its_floor_turns_round():
+    x0, x1, y = LAYOUT.view_x, LAYOUT.view_x + LAYOUT.view_w - 1, LAYOUT.view_y + 5
+    third = LAYOUT.view_w // 3
+    assert touch_action((x0, y), LAYOUT) == 'left'
+    assert touch_action((x0 + third - 1, y), LAYOUT) == 'left'
+    assert touch_action((x0 + third, y), LAYOUT) == 'forward'
+    assert touch_action((x1 - third, y), LAYOUT) == 'forward'
+    assert touch_action((x1 - third + 1, y), LAYOUT) == 'right'
+    assert touch_action((x1, y), LAYOUT) == 'right'
+    assert touch_action((VIEW_MIDDLE, LAYOUT.floor_y - 1), LAYOUT) == 'forward'
+    for x in (x0, VIEW_MIDDLE, x1):
+        assert touch_action((x, LAYOUT.floor_y), LAYOUT) == 'around'
+        assert touch_action((x, LAYOUT.height - 1), LAYOUT) == 'around'
+
+
+def test_touches_off_the_view_do_nothing():
+    assert touch_action((VIEW_MIDDLE, LAYOUT.view_y - 1), LAYOUT) is None   # above it
+    assert touch_action((LAYOUT.view_x - 1, LAYOUT.view_y + 5), LAYOUT) is None  # the stats
 
 
 def test_tapping_the_menu_button_opens_the_menu():
@@ -74,7 +89,8 @@ def test_b_closes_the_menu_and_arrows_move_again_once_it_is_shut():
 
 def test_taps_on_the_view_move_you():
     c = controls()
-    assert c.handle(tap((120, LAYOUT.view_y + 5))) == ['step']
+    assert c.handle(tap((VIEW_MIDDLE, LAYOUT.view_y + 5))) == ['step']
+    assert c.handle(tap((VIEW_MIDDLE, LAYOUT.floor_y + 2))) == ['turn']
 
 
 def test_once_you_have_won_any_key_or_touch_starts_again():
